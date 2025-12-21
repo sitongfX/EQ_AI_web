@@ -3,24 +3,24 @@ import { Analytics } from '@vercel/analytics/react';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'EQ Coach - AI-Powered Emotional Intelligence Training',
+  title: 'NiceAI - Your EQ & Social Skills Coach',
   description: 'Practice difficult conversations and improve your emotional intelligence with AI-powered simulations. Build self-awareness, manage emotions, develop empathy, and strengthen relationships through interactive role-play scenarios.',
   keywords: 'emotional intelligence, EQ training, conversation practice, soft skills, communication skills, empathy training, self-awareness, relationship management',
-  authors: [{ name: 'EQ Coach' }],
+  authors: [{ name: 'NiceAI' }],
   manifest: '/manifest.json',
   icons: {
     icon: '/favicon.svg',
     apple: '/icons/icon.svg',
   },
   openGraph: {
-    title: 'EQ Coach - AI-Powered Emotional Intelligence Training',
+    title: 'NiceAI - Your EQ & Social Skills Coach',
     description: 'Practice difficult conversations and improve your emotional intelligence with AI-powered simulations.',
     type: 'website',
     locale: 'en_US',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'EQ Coach - AI-Powered Emotional Intelligence Training',
+    title: 'NiceAI - Your EQ & Social Skills Coach',
     description: 'Practice difficult conversations and improve your emotional intelligence with AI-powered simulations.',
   },
   themeColor: [
@@ -54,18 +54,18 @@ export default function RootLayout({
                 },
                 {
                   '@type': 'Question',
-                  name: 'How does EQ Coach help improve emotional intelligence?',
+                  name: 'How does NiceAI help improve emotional intelligence?',
                   acceptedAnswer: {
                     '@type': 'Answer',
-                    text: 'EQ Coach provides realistic conversation scenarios where you can practice difficult conversations with AI characters. You receive real-time feedback on your emotional intelligence across four dimensions, helping you identify areas for improvement and track your progress over time.',
+                    text: 'NiceAI provides realistic conversation scenarios where you can practice difficult conversations with AI characters. You receive real-time feedback on your emotional intelligence across four dimensions, helping you identify areas for improvement and track your progress over time.',
                   },
                 },
                 {
                   '@type': 'Question',
-                  name: 'Is EQ Coach free to use?',
+                  name: 'Is NiceAI free to use?',
                   acceptedAnswer: {
                     '@type': 'Answer',
-                    text: 'Yes, EQ Coach is free to use. You can practice unlimited conversation scenarios and receive AI-powered feedback on your emotional intelligence skills at no cost.',
+                    text: 'Yes, NiceAI is free to use. You can practice unlimited conversation scenarios and receive AI-powered feedback on your emotional intelligence skills at no cost. Visit https://niceai.chat/ to get started.',
                   },
                 },
               ],
@@ -80,4 +80,5 @@ export default function RootLayout({
     </html>
   );
 }
+
 

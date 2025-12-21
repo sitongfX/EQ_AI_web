@@ -19,7 +19,7 @@ import { Message } from '@/lib/ai-client';
 function ShareModal({ isOpen, onClose, shareData }: { isOpen: boolean; onClose: () => void; shareData: any }) {
   const [copied, setCopied] = useState(false);
 
-  const shareText = `🧠 EQ Coach Session Complete!\n\n📊 Results:\n• Average EQ Score: ${shareData.avgScore}\n• Goals Completed: ${shareData.completedCount}/${shareData.totalTasks}\n• Messages: ${shareData.messageCount}\n\n🎯 Scenario: ${shareData.scenarioTitle}\n\nPractice your emotional intelligence at: ${typeof window !== 'undefined' ? window.location.origin : ''}`;
+  const shareText = `🧠 NiceAI Session Complete!\n\n📊 Results:\n• Average EQ Score: ${shareData.avgScore}\n• Goals Completed: ${shareData.completedCount}/${shareData.totalTasks}\n• Messages: ${shareData.messageCount}\n\n🎯 Scenario: ${shareData.scenarioTitle}\n\nPractice your emotional intelligence at: https://niceai.chat/`;
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(shareText);
@@ -31,7 +31,7 @@ function ShareModal({ isOpen, onClose, shareData }: { isOpen: boolean; onClose: 
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'EQ Coach Session Results',
+          title: 'NiceAI Session Results',
           text: shareText,
         });
       } catch (err) {

@@ -45,7 +45,7 @@ function MessageBubble({ message, showAnalysis = true }: { message: Message; sho
         {isCoach && (
           <span className="text-xs font-medium text-amber-600 flex items-center gap-1">
             <Lightbulb className="w-3 h-3" />
-            EQ Coach Hint
+            NiceAI Hint
           </span>
         )}
 

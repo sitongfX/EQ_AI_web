@@ -52,10 +52,9 @@ export default function LandingPage() {
               </div>
               <div>
                 <h1 className="font-bold text-xl tracking-tight">
-                  <span className="gradient-text">EQ</span>
-                  <span className="text-slate-800"> Coach</span>
+                  <span className="gradient-text">NiceAI</span>
                 </h1>
-                <p className="text-[11px] text-slate-500 font-medium tracking-wide">AI-POWERED EQ TRAINING</p>
+                <p className="text-[11px] text-slate-500 font-medium tracking-wide">AI-POWERED CONVERSATIONS</p>
               </div>
             </motion.div>
 
@@ -298,7 +297,7 @@ export default function LandingPage() {
                 <Brain className="w-5 h-5 text-white" />
               </div>
               <div>
-                <span className="font-bold text-slate-800">EQ Coach</span>
+                <span className="font-bold text-slate-800">NiceAI</span>
                 <p className="text-xs text-slate-500">Powered by AI</p>
               </div>
             </div>
@@ -310,7 +309,7 @@ export default function LandingPage() {
             </div>
 
             <p className="text-sm text-slate-400">
-              © {new Date().getFullYear()} EQ Coach. All rights reserved.
+              © {new Date().getFullYear()} NiceAI. All rights reserved.
             </p>
           </div>
         </div>

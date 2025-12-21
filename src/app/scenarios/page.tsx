@@ -318,10 +318,9 @@ export default function ScenariosPage() {
               </div>
               <div>
                 <h1 className="font-bold text-xl tracking-tight">
-                  <span className="gradient-text">EQ</span>
-                  <span className="text-slate-800"> Coach</span>
+                  <span className="gradient-text">NiceAI</span>
                 </h1>
-                <p className="text-[11px] text-slate-500 font-medium tracking-wide">AI-POWERED EQ TRAINING</p>
+                <p className="text-[11px] text-slate-500 font-medium tracking-wide">AI-POWERED CONVERSATIONS</p>
               </div>
             </motion.div>
 
