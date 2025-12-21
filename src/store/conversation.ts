@@ -26,6 +26,7 @@ interface ConversationState {
   isSessionComplete: boolean;
   hintsAvailable: number;
   showHintPrompt: boolean;
+  hasEQData: boolean; // Whether user has sent at least one message with EQ analysis
   
   initSession: (scenario: Scenario) => void;
   sendMessage: (content: string) => Promise<void>;
@@ -116,6 +117,7 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
   isSessionComplete: false,
   hintsAvailable: 0,
   showHintPrompt: false,
+  hasEQData: false,
 
   initSession: (scenario: Scenario) => {
     const session: Session = {
@@ -144,6 +146,7 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
       isSessionComplete: false,
       hintsAvailable: 0,
       showHintPrompt: false,
+      hasEQData: false,
     });
   },
 
@@ -203,6 +206,7 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
         currentEQScores: newScores,
         completedTasks: newCompletedTasks,
         isAIResponding: false,
+        hasEQData: true,
       }));
     } catch (error) {
       console.error('Error in conversation:', error);
@@ -283,6 +287,7 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
       isSessionComplete: false,
       hintsAvailable: 0,
       showHintPrompt: false,
+      hasEQData: false,
     });
   },
 }));

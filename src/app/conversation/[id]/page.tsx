@@ -144,7 +144,9 @@ export default function ConversationPage() {
     currentEQScores,
     completedTasks,
     isAIResponding,
+    isSessionComplete,
     showHintPrompt,
+    hasEQData,
     initSession,
     sendMessage,
     requestHint,
@@ -165,6 +167,13 @@ export default function ConversationPage() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Navigate to summary when session is complete
+  useEffect(() => {
+    if (isSessionComplete && scenario) {
+      router.push(`/summary/${scenario.id}`);
+    }
+  }, [isSessionComplete, scenario, router]);
 
   const handleSend = async () => {
     if (!inputValue.trim() || isAIResponding) return;
@@ -196,9 +205,9 @@ export default function ConversationPage() {
   const difficulty = difficultyInfo[scenario.difficulty];
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#FAFBFC]">
-      {/* Header with shadow */}
-      <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-xl border-b border-slate-200/50 shadow-sm">
+    <div className="h-screen flex flex-col bg-[#FAFBFC] overflow-hidden">
+      {/* Header - fixed */}
+      <header className="flex-shrink-0 z-50 bg-white/90 backdrop-blur-xl border-b border-slate-200/50 shadow-sm">
         <div className="max-w-4xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -226,7 +235,7 @@ export default function ConversationPage() {
             </div>
 
             <div className="hidden lg:block">
-              <CompactEQRadar scores={currentEQScores} />
+              <CompactEQRadar scores={currentEQScores} hasData={hasEQData} />
             </div>
           </div>
 
@@ -266,9 +275,9 @@ export default function ConversationPage() {
         </div>
       </header>
 
-      {/* Main Chat Area */}
-      <main className="flex-1 overflow-y-auto">
-        <div className="max-w-4xl mx-auto px-4 py-6 space-y-5">
+      {/* Main Chat Area - scrollable */}
+      <main className="flex-1 overflow-y-auto min-h-0">
+        <div className="max-w-4xl mx-auto px-4 py-4 sm:py-6 space-y-4 sm:space-y-5">
           {/* Context Card - shown by default */}
           <AnimatePresence>
             {showContext && (
@@ -362,11 +371,11 @@ export default function ConversationPage() {
         </div>
       </main>
 
-      {/* Input Area */}
-      <div className="sticky bottom-0 bg-white/90 backdrop-blur-xl border-t border-slate-200/50 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
-        <div className="max-w-4xl mx-auto px-4 py-4">
+      {/* Input Area - anchored at bottom */}
+      <div className="flex-shrink-0 bg-white/90 backdrop-blur-xl border-t border-slate-200/50 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+        <div className="max-w-4xl mx-auto px-4 py-3 sm:py-4">
           <div className="lg:hidden mb-4 flex justify-center">
-            <CompactEQRadar scores={currentEQScores} />
+            <CompactEQRadar scores={currentEQScores} hasData={hasEQData} size={70} />
           </div>
 
           <div className="flex items-end gap-3">

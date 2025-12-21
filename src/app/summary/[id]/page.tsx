@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Home, RefreshCw, Trophy, Target, Brain, TrendingUp, Star, Share2, Check, X } from 'lucide-react';
 import { scenarios } from '@/data/scenarios';
 import { useConversationStore, parseObjectives } from '@/store/conversation';
+import { useHistoryStore } from '@/store/history';
 import { EQRadar } from '@/components/EQRadar';
 import { Button } from '@/components/Button';
 
@@ -82,8 +83,10 @@ export default function SummaryPage() {
   const params = useParams();
   const id = params.id as string;
   const [showShare, setShowShare] = useState(false);
+  const [historySaved, setHistorySaved] = useState(false);
 
   const { session, currentEQScores, completedTasks, resetSession } = useConversationStore();
+  const { addSession } = useHistoryStore();
 
   const scenario = scenarios.find(s => s.id === id);
 
@@ -92,6 +95,31 @@ export default function SummaryPage() {
       router.push(`/conversation/${id}`);
     }
   }, [session, scenario, id, router]);
+
+  // Save session to history once
+  useEffect(() => {
+    if (session && scenario && !historySaved) {
+      const tasks = parseObjectives(scenario.userObjective);
+      const completedCount = tasks.filter(t => completedTasks.has(t)).length;
+      const avgScore = currentEQScores.reduce((sum, s) => sum + s.score, 0) / currentEQScores.length;
+      
+      addSession({
+        scenarioId: scenario.id,
+        scenarioTitle: scenario.title,
+        date: new Date().toISOString(),
+        averageScore: Math.round(avgScore),
+        goalsCompleted: completedCount,
+        totalGoals: tasks.length,
+        scores: {
+          selfAwareness: currentEQScores.find(s => s.dimension === 'selfAwareness')?.score || 50,
+          selfManagement: currentEQScores.find(s => s.dimension === 'selfManagement')?.score || 50,
+          socialAwareness: currentEQScores.find(s => s.dimension === 'socialAwareness')?.score || 50,
+          relationshipManagement: currentEQScores.find(s => s.dimension === 'relationshipManagement')?.score || 50,
+        },
+      });
+      setHistorySaved(true);
+    }
+  }, [session, scenario, currentEQScores, completedTasks, addSession, historySaved]);
 
   if (!scenario || !session) {
     return (
@@ -199,7 +227,12 @@ export default function SummaryPage() {
           </div>
           
           <div className="flex justify-center">
-            <EQRadar scores={currentEQScores} size={250} />
+            <div className="hidden sm:block">
+              <EQRadar scores={currentEQScores} size={250} />
+            </div>
+            <div className="sm:hidden">
+              <EQRadar scores={currentEQScores} size={180} />
+            </div>
           </div>
         </motion.div>
 

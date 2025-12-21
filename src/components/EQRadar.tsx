@@ -22,17 +22,18 @@ interface EQRadarProps {
   size?: number;
   showLabels?: boolean;
   animated?: boolean;
+  hasData?: boolean; // Whether there's actual EQ data (user has sent messages)
 }
 
-export function EQRadar({ scores, size = 200, showLabels = true }: EQRadarProps) {
-  const [animatedScores, setAnimatedScores] = useState(scores.map(() => 50));
+export function EQRadar({ scores, size = 200, showLabels = true, hasData = true }: EQRadarProps) {
+  const [animatedScores, setAnimatedScores] = useState(scores.map(() => hasData ? 50 : 0));
 
   useEffect(() => {
     const timeout = setTimeout(() => {
-      setAnimatedScores(scores.map(s => s.score));
+      setAnimatedScores(scores.map(s => hasData ? s.score : 0));
     }, 100);
     return () => clearTimeout(timeout);
-  }, [scores]);
+  }, [scores, hasData]);
 
   const centerX = size / 2;
   const radius = size / 2 * 0.85;
@@ -87,19 +88,21 @@ export function EQRadar({ scores, size = 200, showLabels = true }: EQRadarProps)
           );
         })}
 
-        {/* Score polygon */}
-        <motion.polygon
-          points={polygonPoints}
-          fill="rgba(99, 102, 241, 0.2)"
-          stroke="#6366F1"
-          strokeWidth="2.5"
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.6, ease: 'easeOut' }}
-        />
+        {/* Score polygon - only show if has data */}
+        {hasData && (
+          <motion.polygon
+            points={polygonPoints}
+            fill="rgba(99, 102, 241, 0.2)"
+            stroke="#6366F1"
+            strokeWidth="2.5"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.6, ease: 'easeOut' }}
+          />
+        )}
 
-        {/* Score points */}
-        {animatedScores.map((score, index) => {
+        {/* Score points - only show if has data */}
+        {hasData && animatedScores.map((score, index) => {
           const point = getPoint(index, score);
           const color = eqDimensions[scores[index].dimension].color;
           return (
@@ -118,6 +121,17 @@ export function EQRadar({ scores, size = 200, showLabels = true }: EQRadarProps)
             />
           );
         })}
+
+        {/* Center dot when no data */}
+        {!hasData && (
+          <circle
+            cx={centerX}
+            cy={centerX}
+            r={4}
+            fill="#cbd5e1"
+            className="opacity-50"
+          />
+        )}
       </svg>
 
       {showLabels && (
@@ -145,10 +159,10 @@ export function EQRadar({ scores, size = 200, showLabels = true }: EQRadarProps)
                   <div className="text-xs text-slate-500 truncate">{dimension.name}</div>
                   <motion.div
                     className="text-sm font-semibold"
-                    style={{ color: dimension.color }}
+                    style={{ color: hasData ? dimension.color : '#94a3b8' }}
                     key={animatedScores[index]}
                   >
-                    {Math.round(animatedScores[index])}
+                    {hasData ? Math.round(animatedScores[index]) : '?'}
                   </motion.div>
                 </div>
               </motion.div>
@@ -167,23 +181,32 @@ const shortNames: Record<string, string> = {
   relationshipManagement: 'Relate',
 };
 
-export function CompactEQRadar({ scores }: { scores: EQScore[] }) {
+interface CompactEQRadarProps {
+  scores: EQScore[];
+  hasData?: boolean;
+  size?: number; // For mobile responsiveness
+}
+
+export function CompactEQRadar({ scores, hasData = true, size = 100 }: CompactEQRadarProps) {
   return (
-    <div className="flex items-center gap-4">
-      <EQRadar scores={scores} size={100} showLabels={false} />
-      <div className="flex flex-col gap-1.5">
+    <div className="flex items-center gap-3 sm:gap-4">
+      <EQRadar scores={scores} size={size} showLabels={false} hasData={hasData} />
+      <div className="flex flex-col gap-1 sm:gap-1.5">
         {scores.map(score => {
           const dimension = eqDimensions[score.dimension];
           const shortName = shortNames[score.dimension] || dimension.name.slice(0, 4);
           return (
-            <div key={score.dimension} className="flex items-center gap-2 text-xs">
+            <div key={score.dimension} className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs">
               <div
-                className="w-2.5 h-2.5 rounded-full"
+                className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full"
                 style={{ backgroundColor: dimension.color }}
               />
-              <span className="text-slate-500 w-14 font-medium">{shortName}</span>
-              <span className="font-bold tabular-nums" style={{ color: dimension.color }}>
-                {Math.round(score.score)}
+              <span className="text-slate-500 w-12 sm:w-14 font-medium">{shortName}</span>
+              <span 
+                className="font-bold tabular-nums" 
+                style={{ color: hasData ? dimension.color : '#94a3b8' }}
+              >
+                {hasData ? Math.round(score.score) : '?'}
               </span>
             </div>
           );
@@ -192,4 +215,3 @@ export function CompactEQRadar({ scores }: { scores: EQScore[] }) {
     </div>
   );
 }
-

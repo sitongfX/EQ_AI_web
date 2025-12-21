@@ -9,6 +9,8 @@ import {
 } from 'lucide-react';
 import { scenarios, Scenario } from '@/data/scenarios';
 import { eqDimensions, categoryInfo, difficultyInfo } from '@/data/eq-dimensions';
+import { useSettingsStore } from '@/store/settings';
+import { useHistoryStore, SessionRecord } from '@/store/history';
 
 const categoryIcons: Record<string, React.ElementType> = {
   Briefcase,
@@ -122,8 +124,47 @@ function CategoryFilter({
   );
 }
 
+// Session History Item
+function SessionHistoryItem({ session }: { session: SessionRecord }) {
+  const date = new Date(session.date);
+  const formattedDate = date.toLocaleDateString('en-US', { 
+    month: 'short', 
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+  
+  return (
+    <div className="p-4 bg-slate-50 rounded-xl">
+      <div className="flex items-start justify-between mb-2">
+        <div>
+          <h4 className="font-medium text-slate-900 text-sm">{session.scenarioTitle}</h4>
+          <p className="text-xs text-slate-500">{formattedDate}</p>
+        </div>
+        <div className="text-right">
+          <p className="text-lg font-bold text-primary">{session.averageScore}</p>
+          <p className="text-xs text-slate-400">avg score</p>
+        </div>
+      </div>
+      <div className="flex items-center gap-2 mt-3">
+        <div className="flex-1 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+          <div 
+            className="h-full bg-gradient-to-r from-primary to-secondary rounded-full"
+            style={{ width: `${session.averageScore}%` }}
+          />
+        </div>
+        <span className="text-xs text-slate-500">
+          {session.goalsCompleted}/{session.totalGoals} goals
+        </span>
+      </div>
+    </div>
+  );
+}
+
 // History Modal
 function HistoryModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+  const { sessions, clearHistory } = useHistoryStore();
+  
   if (!isOpen) return null;
   
   return (
@@ -138,7 +179,7 @@ function HistoryModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
-        className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl"
+        className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl max-h-[80vh] overflow-hidden flex flex-col"
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-6">
@@ -147,11 +188,28 @@ function HistoryModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
             <X className="w-5 h-5 text-slate-400" />
           </button>
         </div>
-        <div className="text-center py-8">
-          <History className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-          <p className="text-slate-500">No sessions yet</p>
-          <p className="text-sm text-slate-400 mt-2">Complete a practice session to see your history here.</p>
-        </div>
+        
+        {sessions.length === 0 ? (
+          <div className="text-center py-8">
+            <History className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+            <p className="text-slate-500">No sessions yet</p>
+            <p className="text-sm text-slate-400 mt-2">Complete a practice session to see your history here.</p>
+          </div>
+        ) : (
+          <>
+            <div className="flex-1 overflow-y-auto space-y-3 mb-4">
+              {sessions.map((session) => (
+                <SessionHistoryItem key={session.id} session={session} />
+              ))}
+            </div>
+            <button
+              onClick={clearHistory}
+              className="text-sm text-slate-400 hover:text-red-500 transition-colors text-center"
+            >
+              Clear History
+            </button>
+          </>
+        )}
       </motion.div>
     </motion.div>
   );
@@ -159,6 +217,8 @@ function HistoryModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
 
 // Settings Modal
 function SettingsModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+  const { showEQAnalysis, soundEffects, toggleShowEQAnalysis, toggleSoundEffects } = useSettingsStore();
+  
   if (!isOpen) return null;
   
   return (
@@ -188,20 +248,35 @@ function SettingsModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
               <p className="font-medium text-slate-900">Show EQ Analysis</p>
               <p className="text-sm text-slate-500">Display scores after each message</p>
             </div>
-            <div className="w-12 h-6 bg-primary rounded-full relative cursor-pointer">
-              <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full shadow" />
-            </div>
+            <button 
+              onClick={toggleShowEQAnalysis}
+              className={`w-12 h-6 rounded-full relative transition-colors duration-200 ${showEQAnalysis ? 'bg-primary' : 'bg-slate-300'}`}
+            >
+              <motion.div 
+                className="absolute top-1 w-4 h-4 bg-white rounded-full shadow"
+                animate={{ x: showEQAnalysis ? 26 : 4 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+              />
+            </button>
           </div>
           <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
             <div>
               <p className="font-medium text-slate-900">Sound Effects</p>
               <p className="text-sm text-slate-500">Play sounds for notifications</p>
             </div>
-            <div className="w-12 h-6 bg-slate-300 rounded-full relative cursor-pointer">
-              <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full shadow" />
-            </div>
+            <button 
+              onClick={toggleSoundEffects}
+              className={`w-12 h-6 rounded-full relative transition-colors duration-200 ${soundEffects ? 'bg-primary' : 'bg-slate-300'}`}
+            >
+              <motion.div 
+                className="absolute top-1 w-4 h-4 bg-white rounded-full shadow"
+                animate={{ x: soundEffects ? 26 : 4 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+              />
+            </button>
           </div>
         </div>
+        <p className="text-xs text-slate-400 mt-4 text-center">Settings are saved automatically</p>
       </motion.div>
     </motion.div>
   );
@@ -212,6 +287,9 @@ export default function ScenariosPage() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  
+  const { totalSessions, currentStreak, getAverageScore } = useHistoryStore();
+  const avgScore = getAverageScore();
 
   const filteredScenarios = useMemo(() => {
     if (!selectedCategory) return scenarios;
@@ -302,17 +380,17 @@ export default function ScenariosPage() {
                 <div className="flex items-center gap-4 lg:gap-6">
                   <div className="stat-card px-5 py-4 text-center">
                     <Target className="w-5 h-5 text-primary mx-auto mb-1" />
-                    <p className="text-2xl font-bold text-slate-900">0</p>
+                    <p className="text-2xl font-bold text-slate-900">{totalSessions}</p>
                     <p className="text-xs text-slate-500">Sessions</p>
                   </div>
                   <div className="stat-card px-5 py-4 text-center">
                     <Flame className="w-5 h-5 text-orange-500 mx-auto mb-1" />
-                    <p className="text-2xl font-bold text-slate-900">0</p>
+                    <p className="text-2xl font-bold text-slate-900">{currentStreak}</p>
                     <p className="text-xs text-slate-500">Day Streak</p>
                   </div>
                   <div className="stat-card px-5 py-4 text-center">
                     <TrendingUp className="w-5 h-5 text-emerald-500 mx-auto mb-1" />
-                    <p className="text-2xl font-bold text-slate-900">-</p>
+                    <p className="text-2xl font-bold text-slate-900">{avgScore || '-'}</p>
                     <p className="text-xs text-slate-500">Avg Score</p>
                   </div>
                 </div>
