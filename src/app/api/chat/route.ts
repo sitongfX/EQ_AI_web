@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai';
 import { NextRequest, NextResponse } from 'next/server';
 
 // API keys are stored securely on the server - NEVER exposed to client
@@ -8,47 +8,92 @@ const API_KEYS = [
   process.env.GEMINI_API_KEY_3,
 ].filter(Boolean) as string[];
 
-// Round-robin key selection for load balancing
+// Track which key to use next
 let currentKeyIndex = 0;
-function getNextApiKey(): string {
+
+// Get model with specific key index
+function getModelWithKey(keyIndex: number): GenerativeModel {
   if (API_KEYS.length === 0) {
     throw new Error('No API keys configured');
   }
-  const key = API_KEYS[currentKeyIndex];
-  currentKeyIndex = (currentKeyIndex + 1) % API_KEYS.length;
-  return key;
+  const key = API_KEYS[keyIndex % API_KEYS.length];
+  const genAI = new GoogleGenerativeAI(key);
+  return genAI.getGenerativeModel({ model: 'gemini-flash-latest' });
 }
 
-function getModel() {
-  const apiKey = getNextApiKey();
-  const genAI = new GoogleGenerativeAI(apiKey);
-  // Using gemini-2.0-flash - the latest available flash model
-  return genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+// Call API with automatic retry on rate limit (429)
+async function callWithRetry<T>(
+  fn: (model: GenerativeModel) => Promise<T>,
+  maxRetries: number = API_KEYS.length
+): Promise<T> {
+  let lastError: any;
+  
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const keyIndex = (currentKeyIndex + attempt) % API_KEYS.length;
+      const model = getModelWithKey(keyIndex);
+      const result = await fn(model);
+      // Success - update index to use next key for load balancing
+      currentKeyIndex = (keyIndex + 1) % API_KEYS.length;
+      return result;
+    } catch (error: any) {
+      lastError = error;
+      console.log(`API call failed with key ${(currentKeyIndex + attempt) % API_KEYS.length}, status: ${error?.status}`);
+      
+      // Only retry on rate limit (429) errors
+      if (error?.status === 429) {
+        console.log(`Rate limited, trying next key...`);
+        continue;
+      }
+      // For other errors, don't retry
+      throw error;
+    }
+  }
+  
+  // All keys exhausted
+  throw lastError;
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { action, message, scenario, conversationHistory, eqScores } = body;
+    const { action, message, scenario, conversationHistory, eqScores, currentEQScores } = body;
 
     if (!action) {
       return NextResponse.json({ error: 'Missing action' }, { status: 400 });
     }
 
-    const model = getModel();
-
     switch (action) {
+      // Combined endpoint - single API call for both EQ analysis AND character response
+      case 'analyzeAndRespond': {
+        const result = await callWithRetry(async (model) => {
+          return await analyzeAndRespond(model, message, scenario, conversationHistory);
+        });
+        return NextResponse.json(result);
+      }
       case 'analyzeEQ': {
-        const result = await analyzeEQ(model, message, scenario);
+        const result = await callWithRetry(async (model) => {
+          return await analyzeEQ(model, message, scenario);
+        });
         return NextResponse.json(result);
       }
       case 'generateResponse': {
-        const result = await generateCharacterResponse(model, message, scenario, conversationHistory);
+        const result = await callWithRetry(async (model) => {
+          return await generateCharacterResponse(model, message, scenario, conversationHistory);
+        });
         return NextResponse.json({ response: result });
       }
       case 'getHint': {
-        const result = await getCoachHint(model, scenario, conversationHistory, eqScores);
+        const result = await callWithRetry(async (model) => {
+          return await getCoachHint(model, scenario, conversationHistory, eqScores);
+        });
         return NextResponse.json({ hint: result });
+      }
+      case 'getImprovements': {
+        const result = await callWithRetry(async (model) => {
+          return await getImprovementSuggestions(model, scenario, currentEQScores || eqScores, conversationHistory);
+        });
+        return NextResponse.json({ suggestions: result });
       }
       default:
         return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
@@ -62,7 +107,87 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function analyzeEQ(model: any, message: string, scenario: any) {
+// COMBINED: Single API call for EQ analysis + character response (cuts API usage in half)
+async function analyzeAndRespond(model: GenerativeModel, message: string, scenario: any, history: any[]) {
+  try {
+    const conversationText = history
+      .map((m: any) => `${m.isUser ? 'User' : scenario.characterName}: ${m.content}`)
+      .join('\n');
+
+    const prompt = `You are an expert at TWO things:
+1. Analyzing emotional intelligence in conversations
+2. Role-playing as a character in a scenario
+
+SCENARIO: ${scenario.title}
+CONTEXT: ${scenario.context}
+USER'S OBJECTIVE: ${scenario.userObjective}
+
+CHARACTER YOU WILL PLAY: ${scenario.characterName}
+CHARACTER PERSONA: ${scenario.characterPersona}
+
+CONVERSATION SO FAR:
+${conversationText}
+
+USER'S NEW MESSAGE: "${message}"
+
+Provide TWO things in your response:
+
+PART 1 - EQ ANALYSIS: Evaluate the user's message across these 4 dimensions (0-100):
+- selfAwareness: Does person identify/express their emotions? ("I feel" statements, emotional vocabulary)
+- selfManagement: Does person stay calm/composed? (measured tone, no blame/accusations)
+- socialAwareness: Does person show empathy? (acknowledging others' feelings, perspective-taking)
+- relationshipManagement: Does person work toward resolution? (collaborative language, constructive suggestions)
+
+PART 2 - CHARACTER RESPONSE: Respond AS ${scenario.characterName}, staying completely in character:
+- React realistically based on how the user just spoke
+- If empathetic, be more receptive. If accusatory, respond defensively but realistically
+- Keep to 1-3 sentences, natural and conversational
+- Do NOT break character or give advice
+
+Respond in this EXACT JSON format only (no markdown, no extra text):
+{
+  "eqAnalysis": {
+    "selfAwareness": <number 0-100>,
+    "selfManagement": <number 0-100>,
+    "socialAwareness": <number 0-100>,
+    "relationshipManagement": <number 0-100>,
+    "feedback": "<one encouraging sentence about what they did well or could improve>"
+  },
+  "characterResponse": "<${scenario.characterName}'s response, 1-3 sentences>"
+}`;
+
+    const result = await model.generateContent(prompt);
+    const responseText = result.response.text();
+    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+    
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      const eq = parsed.eqAnalysis;
+      const overallScore = (eq.selfAwareness + eq.selfManagement + eq.socialAwareness + eq.relationshipManagement) / 4;
+      
+      return {
+        eqAnalysis: {
+          selfAwareness: Math.min(100, Math.max(0, eq.selfAwareness)),
+          selfManagement: Math.min(100, Math.max(0, eq.selfManagement)),
+          socialAwareness: Math.min(100, Math.max(0, eq.socialAwareness)),
+          relationshipManagement: Math.min(100, Math.max(0, eq.relationshipManagement)),
+          overallScore,
+          feedback: eq.feedback || 'Keep practicing your emotional intelligence skills!',
+        },
+        characterResponse: parsed.characterResponse || fallbackCharacterResponse(message, history),
+      };
+    }
+    throw new Error('Invalid response format');
+  } catch (error) {
+    console.error('Combined analysis error:', error);
+    return {
+      eqAnalysis: fallbackEQAnalysis(message),
+      characterResponse: fallbackCharacterResponse(message, history),
+    };
+  }
+}
+
+async function analyzeEQ(model: GenerativeModel, message: string, scenario: any) {
   try {
     const prompt = `You are an expert emotional intelligence (EQ) analyst. Analyze the following message in the context of a difficult conversation scenario.
 
@@ -116,7 +241,7 @@ Respond in this EXACT JSON format only (no markdown, no extra text):
   }
 }
 
-async function generateCharacterResponse(model: any, message: string, scenario: any, history: any[]) {
+async function generateCharacterResponse(model: GenerativeModel, message: string, scenario: any, history: any[]) {
   try {
     const conversationText = history
       .map((m: any) => `${m.isUser ? 'User' : scenario.characterName}: ${m.content}`)
@@ -161,7 +286,7 @@ ${scenario.characterName}:`;
   }
 }
 
-async function getCoachHint(model: any, scenario: any, history: any[], scores: any[]) {
+async function getCoachHint(model: GenerativeModel, scenario: any, history: any[], scores: any[]) {
   try {
     const weakestDimension = scores.reduce((min, s) => (s.score < min.score ? s : min));
     const recentConversation = history
@@ -198,6 +323,67 @@ Tip:`;
   } catch (error) {
     console.error('Coach hint error:', error);
     return fallbackHint(scores);
+  }
+}
+
+async function getImprovementSuggestions(model: GenerativeModel, scenario: any, scores: any[], history: any[]) {
+  try {
+    const weakestDimension = scores.reduce((min, s) => (s.score < min.score ? s : min));
+    const conversationSummary = history
+      .slice(-6)
+      .map((m: any) => `${m.isUser ? 'User' : scenario.characterName}: ${m.content}`)
+      .join('\n');
+
+    const dimensionNames: Record<string, string> = {
+      selfAwareness: 'Self-Awareness',
+      selfManagement: 'Self-Management',
+      socialAwareness: 'Social Awareness',
+      relationshipManagement: 'Relationship Management',
+    };
+
+    const prompt = `You are an EQ coach providing personalized improvement suggestions after a practice conversation.
+
+SCENARIO: ${scenario.title}
+USER'S GOAL: ${scenario.userObjective}
+
+CONVERSATION SUMMARY:
+${conversationSummary}
+
+FINAL EQ SCORES:
+${scores.map(s => `- ${dimensionNames[s.dimension] || s.dimension}: ${Math.round(s.score)}/100`).join('\n')}
+
+The user's weakest area is: ${dimensionNames[weakestDimension.dimension] || weakestDimension.dimension} (${Math.round(weakestDimension.score)}/100)
+
+Provide 3 specific, actionable improvement suggestions. Each suggestion should:
+- Be 1-2 sentences
+- Be practical and immediately applicable
+- Focus on improving ${dimensionNames[weakestDimension.dimension] || weakestDimension.dimension}
+- Include concrete examples or phrases they can use
+- Be encouraging and supportive
+
+Respond in this EXACT JSON format only (no markdown, no extra text):
+{
+  "suggestions": [
+    "<first suggestion>",
+    "<second suggestion>",
+    "<third suggestion>"
+  ]
+}`;
+
+    const result = await model.generateContent(prompt);
+    const responseText = result.response.text();
+    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+    
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      if (Array.isArray(parsed.suggestions) && parsed.suggestions.length > 0) {
+        return parsed.suggestions.slice(0, 3);
+      }
+    }
+    throw new Error('Invalid response format');
+  } catch (error) {
+    console.error('Improvement suggestions error:', error);
+    return getFallbackImprovements(scores);
   }
 }
 
@@ -296,3 +482,31 @@ function fallbackHint(scores: any[]) {
   return options[Math.floor(Math.random() * options.length)];
 }
 
+function getFallbackImprovements(scores: any[]): string[] {
+  const weakest = scores.reduce((min, s) => (s.score < min.score ? s : min));
+  
+  const improvements: Record<string, string[]> = {
+    selfAwareness: [
+      "Practice identifying your emotions in real-time. Try saying 'I notice I'm feeling...' before responding in conversations.",
+      "Keep an emotion journal. Write down how you felt during difficult conversations and what triggered those feelings.",
+      "Use 'I feel' statements more often. Instead of 'You made me angry,' try 'I feel frustrated when...'"
+    ],
+    selfManagement: [
+      "Take a pause before responding. Count to three and take a deep breath when you feel triggered.",
+      "Practice reframing negative thoughts. Instead of 'This is terrible,' try 'This is challenging, but I can handle it.'",
+      "Use curiosity instead of accusations. Replace 'You always...' with 'I've noticed... Can you help me understand?'"
+    ],
+    socialAwareness: [
+      "Practice active listening. Paraphrase what the other person said: 'So what I'm hearing is...'",
+      "Ask about their experience: 'How did that situation feel for you?' or 'What was that like from your perspective?'",
+      "Acknowledge their emotions explicitly: 'I can see why you might feel that way' or 'That must have been difficult.'"
+    ],
+    relationshipManagement: [
+      "Use collaborative language: 'Let's figure this out together' or 'What if we tried...'",
+      "Find common ground first: 'We both want this to work out. How can we make that happen?'",
+      "Propose solutions together: 'How about we...' or 'Would it help if we...'"
+    ],
+  };
+
+  return improvements[weakest.dimension] || improvements.selfAwareness;
+}

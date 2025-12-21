@@ -3,12 +3,17 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Home, RefreshCw, Trophy, Target, Brain, TrendingUp, Star, Share2, Check, X } from 'lucide-react';
+import { 
+  ArrowLeft, Home, RefreshCw, Trophy, Target, Brain, TrendingUp, Star, 
+  Share2, Check, X, Zap, User, Bot, Sparkles, Lightbulb
+} from 'lucide-react';
 import { scenarios } from '@/data/scenarios';
 import { useConversationStore, parseObjectives } from '@/store/conversation';
 import { useHistoryStore } from '@/store/history';
 import { EQRadar } from '@/components/EQRadar';
 import { Button } from '@/components/Button';
+import { eqDimensions } from '@/data/eq-dimensions';
+import { Message } from '@/lib/ai-client';
 
 // Share Modal Component
 function ShareModal({ isOpen, onClose, shareData }: { isOpen: boolean; onClose: () => void; shareData: any }) {
@@ -78,6 +83,227 @@ function ShareModal({ isOpen, onClose, shareData }: { isOpen: boolean; onClose: 
   );
 }
 
+// High Impact Moment Component
+function HighImpactMoment({ message, scenario }: { message: Message; scenario: any }) {
+  if (!message.eqAnalysis) return null;
+  
+  const analysis = message.eqAnalysis;
+  const highestDimension = Object.entries({
+    selfAwareness: analysis.selfAwareness,
+    selfManagement: analysis.selfManagement,
+    socialAwareness: analysis.socialAwareness,
+    relationshipManagement: analysis.relationshipManagement,
+  }).reduce((max, [key, value]) => value > max[1] ? [key, value] : max, ['', 0]);
+
+  const dimensionInfo = eqDimensions[highestDimension[0]];
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="card p-6 border-2 border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50"
+    >
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-lg shadow-amber-500/30">
+          <Zap className="w-5 h-5 text-white" />
+        </div>
+        <div>
+          <h3 className="text-lg font-bold text-slate-900">⭐ High Impact Moment</h3>
+          <p className="text-xs text-amber-600">Your best EQ response in this session</p>
+        </div>
+      </div>
+
+      <div className="bg-white/70 rounded-2xl p-4 mb-4">
+        <div className="flex items-start gap-3">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center flex-shrink-0">
+            <User className="w-4 h-4 text-white" />
+          </div>
+          <div>
+            <p className="text-sm text-slate-500 mb-1">You said:</p>
+            <p className="text-slate-800 font-medium">&ldquo;{message.content}&rdquo;</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-4 mb-4">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-sm font-medium text-slate-700">Overall Score</span>
+            <span className="text-2xl font-bold gradient-text">{Math.round(analysis.overallScore)}</span>
+          </div>
+          <div className="flex gap-1">
+            {Object.entries({
+              selfAwareness: analysis.selfAwareness,
+              selfManagement: analysis.selfManagement,
+              socialAwareness: analysis.socialAwareness,
+              relationshipManagement: analysis.relationshipManagement,
+            }).map(([dim, score]) => (
+              <div
+                key={dim}
+                className="flex-1 h-2 rounded-full"
+                style={{ backgroundColor: `${eqDimensions[dim].color}40` }}
+              >
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{ 
+                    width: `${score}%`,
+                    backgroundColor: eqDimensions[dim].color 
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="p-3 rounded-xl bg-white/50 border border-amber-200/50">
+        <p className="text-sm text-amber-800 flex items-start gap-2">
+          <Sparkles className="w-4 h-4 flex-shrink-0 mt-0.5 text-amber-500" />
+          <span>{analysis.feedback}</span>
+        </p>
+      </div>
+    </motion.div>
+  );
+}
+
+// Further Improvement Component
+function FurtherImprovement({ scenario, scores, messages }: { scenario: any; scores: any[]; messages: Message[] }) {
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchSuggestions = async () => {
+      try {
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'getImprovements',
+            scenario,
+            currentEQScores: scores,
+            conversationHistory: messages,
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setSuggestions(data.suggestions || []);
+        } else {
+          throw new Error('Failed to fetch suggestions');
+        }
+      } catch (error) {
+        console.error('Error fetching improvement suggestions:', error);
+        // Fallback to static suggestions
+        const weakest = scores.reduce((min, s) => (s.score < min.score ? s : min));
+        setSuggestions(getFallbackSuggestions(weakest.dimension));
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchSuggestions();
+  }, [scenario, scores, messages]);
+
+  const weakest = scores.reduce((min, s) => (s.score < min.score ? s : min));
+  const dimensionInfo = eqDimensions[weakest.dimension];
+
+  if (isLoading) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.25 }}
+        className="card p-6"
+      >
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500/10 to-purple-500/10 flex items-center justify-center">
+            <TrendingUp className="w-5 h-5 text-indigo-500" />
+          </div>
+          <h3 className="text-lg font-bold text-slate-900">Further Improvement</h3>
+        </div>
+        <div className="flex items-center justify-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </motion.div>
+    );
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.25 }}
+      className="card p-6"
+    >
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+          <TrendingUp className="w-5 h-5 text-white" />
+        </div>
+        <div>
+          <h3 className="text-lg font-bold text-slate-900">Further Improvement</h3>
+          <p className="text-xs text-slate-500">Focus area: {dimensionInfo.name}</p>
+        </div>
+      </div>
+
+      <div className="mb-4 p-3 rounded-xl bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-100">
+        <div className="flex items-center gap-2">
+          <div
+            className="w-3 h-3 rounded-full"
+            style={{ backgroundColor: dimensionInfo.color }}
+          />
+          <span className="text-sm font-semibold text-slate-700">
+            {dimensionInfo.name} Score: {Math.round(weakest.score)}/100
+          </span>
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        {suggestions.map((suggestion, index) => (
+          <motion.div
+            key={index}
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.3 + index * 0.1 }}
+            className="flex items-start gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100"
+          >
+            <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <Lightbulb className="w-3.5 h-3.5 text-indigo-600" />
+            </div>
+            <p className="text-sm text-slate-700 leading-relaxed">{suggestion}</p>
+          </motion.div>
+        ))}
+      </div>
+    </motion.div>
+  );
+}
+
+function getFallbackSuggestions(dimension: string): string[] {
+  const suggestions: Record<string, string[]> = {
+    selfAwareness: [
+      "Practice identifying your emotions in real-time. Try saying 'I notice I'm feeling...' before responding in conversations.",
+      "Keep an emotion journal. Write down how you felt during difficult conversations and what triggered those feelings.",
+      "Use 'I feel' statements more often. Instead of 'You made me angry,' try 'I feel frustrated when...'"
+    ],
+    selfManagement: [
+      "Take a pause before responding. Count to three and take a deep breath when you feel triggered.",
+      "Practice reframing negative thoughts. Instead of 'This is terrible,' try 'This is challenging, but I can handle it.'",
+      "Use curiosity instead of accusations. Replace 'You always...' with 'I've noticed... Can you help me understand?'"
+    ],
+    socialAwareness: [
+      "Practice active listening. Paraphrase what the other person said: 'So what I'm hearing is...'",
+      "Ask about their experience: 'How did that situation feel for you?' or 'What was that like from your perspective?'",
+      "Acknowledge their emotions explicitly: 'I can see why you might feel that way' or 'That must have been difficult.'"
+    ],
+    relationshipManagement: [
+      "Use collaborative language: 'Let's figure this out together' or 'What if we tried...'",
+      "Find common ground first: 'We both want this to work out. How can we make that happen?'",
+      "Propose solutions together: 'How about we...' or 'Would it help if we...'"
+    ],
+  };
+
+  return suggestions[dimension] || suggestions.selfAwareness;
+}
+
 export default function SummaryPage() {
   const router = useRouter();
   const params = useParams();
@@ -85,7 +311,7 @@ export default function SummaryPage() {
   const [showShare, setShowShare] = useState(false);
   const [historySaved, setHistorySaved] = useState(false);
 
-  const { session, currentEQScores, completedTasks, resetSession } = useConversationStore();
+  const { session, currentEQScores, completedTasks, messages, resetSession } = useConversationStore();
   const { addSession } = useHistoryStore();
 
   const scenario = scenarios.find(s => s.id === id);
@@ -137,7 +363,12 @@ export default function SummaryPage() {
   const tasks = parseObjectives(scenario.userObjective);
   const completedCount = tasks.filter(t => completedTasks.has(t)).length;
   const avgScore = currentEQScores.reduce((sum, s) => sum + s.score, 0) / currentEQScores.length;
-  const userMessages = session.messages.filter(m => m.isUser);
+  const userMessages = messages.filter(m => m.isUser);
+  
+  // Find highest impact moment (user message with highest overall score)
+  const highImpactMessage = userMessages
+    .filter(m => m.eqAnalysis)
+    .sort((a, b) => (b.eqAnalysis?.overallScore || 0) - (a.eqAnalysis?.overallScore || 0))[0];
 
   const handleRetry = () => {
     resetSession();
@@ -181,42 +412,47 @@ export default function SummaryPage() {
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 py-8 space-y-8">
+      <main className="max-w-4xl mx-auto px-4 py-6 sm:py-8 space-y-6">
         {/* Hero Stats */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="gradient-border"
         >
-          <div className="bg-white rounded-[22px] p-8 text-center">
-            <div className="w-20 h-20 rounded-2xl animated-gradient flex items-center justify-center mx-auto mb-6 shadow-lg shadow-primary/30">
-              <Trophy className="w-10 h-10 text-white" />
+          <div className="bg-white rounded-[22px] p-6 sm:p-8 text-center">
+            <div className="w-16 sm:w-20 h-16 sm:h-20 rounded-2xl animated-gradient flex items-center justify-center mx-auto mb-4 sm:mb-6 shadow-lg shadow-primary/30">
+              <Trophy className="w-8 sm:w-10 h-8 sm:h-10 text-white" />
             </div>
-            <h2 className="text-2xl font-bold text-slate-900 mb-2">Great Practice Session!</h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-slate-900 mb-2">Great Practice Session!</h2>
             <p className="text-slate-600 mb-6">{scenario.title} with {scenario.characterName}</p>
 
-            <div className="flex justify-center gap-8">
+            <div className="flex justify-center gap-6 sm:gap-8">
               <div className="text-center">
-                <div className="text-3xl font-bold gradient-text">{Math.round(avgScore)}</div>
-                <div className="text-sm text-slate-500">Avg EQ Score</div>
+                <div className="text-2xl sm:text-3xl font-bold gradient-text">{Math.round(avgScore)}</div>
+                <div className="text-xs sm:text-sm text-slate-500">Avg EQ Score</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-emerald-500">{completedCount}/{tasks.length}</div>
-                <div className="text-sm text-slate-500">Goals Met</div>
+                <div className="text-2xl sm:text-3xl font-bold text-emerald-500">{completedCount}/{tasks.length}</div>
+                <div className="text-xs sm:text-sm text-slate-500">Goals Met</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-blue-500">{userMessages.length}</div>
-                <div className="text-sm text-slate-500">Messages</div>
+                <div className="text-2xl sm:text-3xl font-bold text-blue-500">{userMessages.length}</div>
+                <div className="text-xs sm:text-sm text-slate-500">Messages</div>
               </div>
             </div>
           </div>
         </motion.div>
 
+        {/* High Impact Moment */}
+        {highImpactMessage && (
+          <HighImpactMoment message={highImpactMessage} scenario={scenario} />
+        )}
+
         {/* EQ Scores */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
+          transition={{ delay: 0.15 }}
           className="card p-6"
         >
           <div className="flex items-center gap-3 mb-6">
@@ -276,12 +512,15 @@ export default function SummaryPage() {
           </div>
         </motion.div>
 
+        {/* Further Improvement */}
+        <FurtherImprovement scenario={scenario} scores={currentEQScores} messages={messages} />
+
         {/* Actions */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="flex gap-4"
+          className="flex flex-col sm:flex-row gap-3 sm:gap-4"
         >
           <Button variant="outline" onClick={handleRetry} fullWidth icon={<RefreshCw className="w-4 h-4" />}>
             Try Again

@@ -3,7 +3,7 @@
 import { create } from 'zustand';
 import { v4 as uuidv4 } from 'uuid';
 import { Scenario } from '@/data/scenarios';
-import { analyzeMessage, generateCharacterResponse, getCoachHint, Message, EQScore, EQAnalysis } from '@/lib/ai-client';
+import { analyzeAndRespond, getCoachHint, Message, EQScore, EQAnalysis } from '@/lib/ai-client';
 
 interface Session {
   id: string;
@@ -167,10 +167,8 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
     }));
 
     try {
-      const [eqAnalysis, characterResponse] = await Promise.all([
-        analyzeMessage(content, scenario, messages),
-        generateCharacterResponse(content, scenario, messages),
-      ]);
+      // Single API call for both EQ analysis and character response (optimized)
+      const { eqAnalysis, characterResponse } = await analyzeAndRespond(content, scenario, messages);
 
       const userMessageWithAnalysis: Message = {
         ...userMessage,

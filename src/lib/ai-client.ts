@@ -26,7 +26,45 @@ export interface EQScore {
   score: number;
 }
 
-// Analyze user message for EQ scores
+// Combined response type
+interface AnalyzeAndRespondResult {
+  eqAnalysis: EQAnalysis;
+  characterResponse: string;
+}
+
+// OPTIMIZED: Single API call for both EQ analysis AND character response
+export async function analyzeAndRespond(
+  message: string,
+  scenario: Scenario,
+  conversationHistory: Message[]
+): Promise<AnalyzeAndRespondResult> {
+  try {
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'analyzeAndRespond',
+        message,
+        scenario,
+        conversationHistory,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('API request failed');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Combined analysis error:', error);
+    return {
+      eqAnalysis: fallbackEQAnalysis(message),
+      characterResponse: fallbackCharacterResponse(message, conversationHistory),
+    };
+  }
+}
+
+// Legacy: Analyze user message for EQ scores (kept for backwards compatibility)
 export async function analyzeMessage(
   message: string,
   scenario: Scenario,
@@ -55,7 +93,7 @@ export async function analyzeMessage(
   }
 }
 
-// Generate character response
+// Legacy: Generate character response (kept for backwards compatibility)
 export async function generateCharacterResponse(
   message: string,
   scenario: Scenario,
@@ -177,4 +215,3 @@ function fallbackHint(scores: EQScore[]): string {
 
   return hints[weakest.dimension] || hints.selfAwareness;
 }
-
