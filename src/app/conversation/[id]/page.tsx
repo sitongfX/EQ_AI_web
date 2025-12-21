@@ -136,7 +136,7 @@ export default function ConversationPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [inputValue, setInputValue] = useState('');
-  const [showContext, setShowContext] = useState(true);
+  const [showContext, setShowContext] = useState(true); // Show context by default
 
   const {
     scenario,
@@ -168,9 +168,13 @@ export default function ConversationPage() {
 
   const handleSend = async () => {
     if (!inputValue.trim() || isAIResponding) return;
+    const message = inputValue;
     setInputValue('');
-    setShowContext(false);
-    await sendMessage(inputValue);
+    // Don't auto-hide context on first message
+    if (messages.filter(m => m.isUser).length >= 1) {
+      setShowContext(false);
+    }
+    await sendMessage(message);
     inputRef.current?.focus();
   };
 
@@ -193,13 +197,13 @@ export default function ConversationPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#FAFBFC]">
-      {/* Header */}
-      <header className="sticky top-0 z-50 glass border-b border-white/50">
+      {/* Header with shadow */}
+      <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-xl border-b border-slate-200/50 shadow-sm">
         <div className="max-w-4xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <button
-                onClick={() => router.push('/')}
+                onClick={() => router.push('/scenarios')}
                 className="p-2 rounded-xl hover:bg-slate-100 transition-colors group"
               >
                 <ArrowLeft className="w-5 h-5 text-slate-400 group-hover:text-slate-600 transition-colors" />
@@ -265,7 +269,7 @@ export default function ConversationPage() {
       {/* Main Chat Area */}
       <main className="flex-1 overflow-y-auto">
         <div className="max-w-4xl mx-auto px-4 py-6 space-y-5">
-          {/* Context Card */}
+          {/* Context Card - shown by default */}
           <AnimatePresence>
             {showContext && (
               <motion.div
@@ -359,14 +363,14 @@ export default function ConversationPage() {
       </main>
 
       {/* Input Area */}
-      <div className="sticky bottom-0 glass border-t border-white/50">
+      <div className="sticky bottom-0 bg-white/90 backdrop-blur-xl border-t border-slate-200/50 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="lg:hidden mb-4 flex justify-center">
             <CompactEQRadar scores={currentEQScores} />
           </div>
 
           <div className="flex items-end gap-3">
-            <div className="flex-1 relative input-ring">
+            <div className="flex-1 relative">
               <textarea
                 ref={inputRef}
                 value={inputValue}
@@ -384,14 +388,9 @@ export default function ConversationPage() {
                 placeholder="Type your response..."
                 disabled={isAIResponding}
                 rows={1}
-                className="w-full px-5 py-3.5 bg-white rounded-2xl border border-slate-200 focus:border-primary/50 focus:ring-0 outline-none resize-none text-sm text-slate-700 placeholder:text-slate-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full px-5 py-3.5 bg-white rounded-2xl border-2 border-slate-200 focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none resize-none text-sm text-slate-700 placeholder:text-slate-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ minHeight: '52px', maxHeight: '120px' }}
               />
-              <div className="absolute right-3 bottom-3 flex items-center gap-1">
-                <span className="text-[10px] text-slate-300">
-                  {inputValue.length > 0 && `${inputValue.length} chars`}
-                </span>
-              </div>
             </div>
 
             <motion.button
@@ -460,4 +459,3 @@ export default function ConversationPage() {
     </div>
   );
 }
-
