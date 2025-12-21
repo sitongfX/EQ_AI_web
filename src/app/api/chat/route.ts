@@ -22,7 +22,8 @@ function getNextApiKey(): string {
 function getModel() {
   const apiKey = getNextApiKey();
   const genAI = new GoogleGenerativeAI(apiKey);
-  return genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+  // Using gemini-2.0-flash - the latest available flash model
+  return genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 }
 
 export async function POST(request: NextRequest) {
