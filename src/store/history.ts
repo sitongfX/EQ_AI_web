@@ -111,7 +111,7 @@ export const useHistoryStore = create<HistoryState>()(
       },
     }),
     {
-      name: 'eq-coach-history',
+      name: 'niceai-history',
     }
   )
 );

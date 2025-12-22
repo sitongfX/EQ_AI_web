@@ -24,7 +24,7 @@ function MessageBubble({ message, showAnalysis = true }: { message: Message; sho
       initial={{ opacity: 0, y: 20, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.3 }}
-      className={`flex gap-3 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}
+      className={`flex gap-3 items-start ${isUser ? 'flex-row-reverse' : 'flex-row'}`}
     >
       <div
         className={`
@@ -45,7 +45,7 @@ function MessageBubble({ message, showAnalysis = true }: { message: Message; sho
         {isCoach && (
           <span className="text-xs font-medium text-amber-600 flex items-center gap-1">
             <Lightbulb className="w-3 h-3" />
-            NiceAI Hint
+            EQ Coach Hint
           </span>
         )}
 
@@ -160,12 +160,21 @@ export default function ConversationPage() {
     const foundScenario = scenarios.find(s => s.id === id);
     if (foundScenario) {
       initSession(foundScenario);
+      // Scroll to top to show context card when entering page
+      setTimeout(() => {
+        const mainElement = document.querySelector('main');
+        if (mainElement) {
+          mainElement.scrollTop = 0;
+        }
+      }, 50);
     }
   }, [id, initSession]);
 
   // Scroll to bottom on new messages
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messages.length > 0) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
   }, [messages]);
 
   // Navigate to summary when session is complete
@@ -206,81 +215,56 @@ export default function ConversationPage() {
 
   return (
     <div className="h-screen flex flex-col bg-[#FAFBFC] overflow-hidden">
-      {/* Header - compact */}
-      <header className="flex-shrink-0 z-50 bg-white/90 backdrop-blur-xl border-b border-slate-200/50">
+      {/* Header - compact, sticky to keep radar visible */}
+      <header className="sticky top-0 flex-shrink-0 z-50 bg-white/90 backdrop-blur-xl border-b border-slate-200/50" style={{ minHeight: '72px' }}>
         <div className="max-w-4xl mx-auto px-3 sm:px-4 py-2.5">
-          {/* First row: Back + Title + Radar */}
-          <div className="flex items-center justify-between gap-2 mb-2">
-            {/* Left: Back + Title */}
-            <div className="flex items-center gap-2 min-w-0 flex-1">
-              <button
-                onClick={() => router.push('/scenarios')}
-                className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors group flex-shrink-0"
-              >
-                <ArrowLeft className="w-4 h-4 text-slate-400 group-hover:text-slate-600" />
-              </button>
-              <div className="min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <h1 className="font-semibold text-base text-slate-900 truncate">{scenario.title}</h1>
-                  <span
-                    className="text-[9px] px-1.5 py-0.5 rounded-full font-medium flex-shrink-0"
-                    style={{ backgroundColor: `${difficulty.color}15`, color: difficulty.color }}
-                  >
-                    {difficulty.name}
-                  </span>
-                </div>
-                <p className="text-[11px] text-slate-500 truncate">
-                  with {scenario.characterName}
-                </p>
+          {/* Grid layout: Back button | Title section | Radar */}
+          <div className="grid grid-cols-[auto_1fr_auto] gap-2 items-center h-full">
+            {/* Column 1: Back button */}
+            <button
+              onClick={() => router.push('/scenarios')}
+              className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors group flex-shrink-0"
+            >
+              <ArrowLeft className="w-4 h-4 text-slate-400 group-hover:text-slate-600" />
+            </button>
+
+            {/* Column 2: Title section */}
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <h1 className="font-semibold text-base text-slate-900 truncate">{scenario.title}</h1>
+                <span
+                  className="text-[9px] px-1.5 py-0.5 rounded-full font-medium flex-shrink-0"
+                  style={{ backgroundColor: `${difficulty.color}15`, color: difficulty.color }}
+                >
+                  {difficulty.name}
+                </span>
               </div>
+              <p className="text-[11px] text-slate-500 truncate flex items-center gap-1">
+                <MessageCircle className="w-3 h-3 text-slate-400" />
+                <span>Conversation with {scenario.characterName}</span>
+              </p>
             </div>
 
-            {/* Right: Compact Radar */}
-            <div className="hidden lg:block flex-shrink-0">
+            {/* Column 3: Compact Radar (always visible, stays in header) */}
+            <div className="flex-shrink-0 flex items-center justify-end">
               <CompactEQRadar scores={currentEQScores} hasData={hasEQData} size={90} />
             </div>
-          </div>
-
-          {/* Second row: Action buttons */}
-          <div className="flex items-center gap-2">
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              onClick={requestHint}
-              disabled={isAIResponding}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-lg transition-all disabled:opacity-50"
-            >
-              <Lightbulb className="w-3.5 h-3.5" />
-              <span>Get Hint</span>
-            </motion.button>
-
-            {userMessageCount >= 3 && (
-              <motion.button
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={completeSession}
-                disabled={isAIResponding}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-all disabled:opacity-50"
-              >
-                <CheckCircle className="w-3.5 h-3.5" />
-                <span>Complete Session</span>
-              </motion.button>
-            )}
           </div>
         </div>
       </header>
 
       {/* Main Chat Area - scrollable */}
       <main className="flex-1 overflow-y-auto min-h-0">
-        <div className="max-w-4xl mx-auto px-4 py-4 sm:py-6 space-y-4 sm:space-y-5">
-          {/* Context Card - shown by default */}
+        <div className="max-w-4xl mx-auto px-4 pt-2 pb-4 sm:pt-3 sm:pb-6 space-y-4 sm:space-y-5">
+          {/* Context Card - shown by default, top always visible at start */}
           <AnimatePresence>
             {showContext && (
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 0 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20, height: 0 }}
                 className="card p-5 sm:p-6"
+                style={{ scrollMarginTop: '0px' }}
               >
                 <div className="flex items-start gap-4 mb-5">
                   <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-blue-500/20">
@@ -332,7 +316,7 @@ export default function ConversationPage() {
 
                 <button
                   onClick={() => setShowContext(false)}
-                  className="mt-4 w-full text-xs text-slate-400 hover:text-slate-600 transition-colors"
+                  className="mt-1 mb-0 w-full text-xs text-slate-400 hover:text-slate-600 transition-colors py-0"
                 >
                   Click to minimize context
                 </button>
@@ -368,12 +352,8 @@ export default function ConversationPage() {
 
       {/* Input Area - anchored at bottom */}
       <div className="flex-shrink-0 bg-white/90 backdrop-blur-xl border-t border-slate-200/50 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
-        <div className="max-w-4xl mx-auto px-4 py-3 sm:py-4">
-          <div className="lg:hidden mb-4 flex justify-center">
-            <CompactEQRadar scores={currentEQScores} hasData={hasEQData} size={70} />
-          </div>
-
-          <div className="flex items-end gap-3">
+        <div className="max-w-4xl mx-auto px-4 py-3 sm:py-4 flex items-center">
+          <div className="flex items-center gap-2 w-full">
             <div className="flex-1 relative">
               <textarea
                 ref={inputRef}
@@ -397,6 +377,33 @@ export default function ConversationPage() {
               />
             </div>
 
+            {/* Hint and Complete buttons */}
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={requestHint}
+              disabled={isAIResponding}
+              className="w-12 h-12 rounded-full flex items-center justify-center bg-white border-2 border-amber-200 text-amber-600 hover:bg-amber-50 transition-all disabled:opacity-50"
+            >
+              <Lightbulb className="w-5 h-5" />
+            </motion.button>
+
+            {userMessageCount >= 3 ? (
+              <motion.button
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={completeSession}
+                disabled={isAIResponding}
+                className="w-12 h-12 rounded-full flex items-center justify-center bg-white border-2 border-emerald-200 text-emerald-600 hover:bg-emerald-50 transition-all disabled:opacity-50"
+              >
+                <CheckCircle className="w-5 h-5" />
+              </motion.button>
+            ) : (
+              <div className="w-12 h-12 rounded-full flex items-center justify-center bg-white border-2 border-slate-200 text-slate-300 opacity-50">
+                <CheckCircle className="w-5 h-5" />
+              </div>
+            )}
+
             <motion.button
               whileTap={{ scale: 0.95 }}
               onClick={handleSend}
@@ -406,10 +413,6 @@ export default function ConversationPage() {
               <Send className="w-5 h-5" />
             </motion.button>
           </div>
-
-          <p className="text-xs text-slate-400 mt-2 text-center">
-            Press <kbd className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 font-mono text-[10px]">Enter</kbd> to send • <kbd className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 font-mono text-[10px]">Shift+Enter</kbd> for new line
-          </p>
         </div>
       </div>
 
