@@ -1,57 +1,135 @@
 import { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai';
+import Groq from 'groq-sdk';
 import { NextRequest, NextResponse } from 'next/server';
 
 // API keys are stored securely on the server - NEVER exposed to client
-const API_KEYS = [
+const GEMINI_API_KEYS = [
   process.env.GEMINI_API_KEY_1,
   process.env.GEMINI_API_KEY_2,
   process.env.GEMINI_API_KEY_3,
 ].filter(Boolean) as string[];
 
-// Track which key to use next
-let currentKeyIndex = 0;
+const GROQ_API_KEYS = [
+  process.env.GROQ_API_KEY_1,
+  process.env.GROQ_API_KEY_2,
+].filter(Boolean) as string[];
 
-// Get model with specific key index
-function getModelWithKey(keyIndex: number): GenerativeModel {
-  if (API_KEYS.length === 0) {
-    throw new Error('No API keys configured');
+// Track which key to use next
+let currentGeminiKeyIndex = 0;
+let currentGroqKeyIndex = 0;
+
+// Unified model interface for both Gemini and Groq
+interface UnifiedModel {
+  type: 'gemini' | 'groq';
+  generateContent: (prompt: string) => Promise<{ response: { text: () => string } }>;
+}
+
+// Get Gemini model with specific key index
+function getGeminiModelWithKey(keyIndex: number): GenerativeModel {
+  if (GEMINI_API_KEYS.length === 0) {
+    throw new Error('No Gemini API keys configured');
   }
-  const key = API_KEYS[keyIndex % API_KEYS.length];
+  const key = GEMINI_API_KEYS[keyIndex % GEMINI_API_KEYS.length];
   const genAI = new GoogleGenerativeAI(key);
   return genAI.getGenerativeModel({ model: 'gemini-flash-latest' });
 }
 
-// Call API with automatic retry on rate limit (429)
+// Get Groq model with specific key index
+function getGroqModelWithKey(keyIndex: number): UnifiedModel {
+  if (GROQ_API_KEYS.length === 0) {
+    throw new Error('No Groq API keys configured');
+  }
+  const key = GROQ_API_KEYS[keyIndex % GROQ_API_KEYS.length];
+  const groq = new Groq({ apiKey: key });
+  
+  return {
+    type: 'groq',
+    generateContent: async (prompt: string) => {
+      const completion = await groq.chat.completions.create({
+        messages: [{ role: 'user', content: prompt }],
+        model: 'llama-3.1-70b-versatile',
+        temperature: 0.7,
+      });
+      return {
+        response: {
+          text: () => completion.choices[0]?.message?.content || '',
+        },
+      };
+    },
+  };
+}
+
+// Adapter to convert Gemini model to unified interface
+function geminiToUnified(model: GenerativeModel): UnifiedModel {
+  return {
+    type: 'gemini',
+    generateContent: async (prompt: string) => {
+      const result = await model.generateContent(prompt);
+      return result;
+    },
+  };
+}
+
+// Call API with automatic retry on rate limit (429), fallback to Groq
 async function callWithRetry<T>(
-  fn: (model: GenerativeModel) => Promise<T>,
-  maxRetries: number = API_KEYS.length
+  fn: (model: UnifiedModel) => Promise<T>,
+  maxRetries: number = GEMINI_API_KEYS.length
 ): Promise<T> {
   let lastError: any;
   
+  // Try Gemini keys first
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
-      const keyIndex = (currentKeyIndex + attempt) % API_KEYS.length;
-      const model = getModelWithKey(keyIndex);
-      const result = await fn(model);
+      const keyIndex = (currentGeminiKeyIndex + attempt) % GEMINI_API_KEYS.length;
+      const geminiModel = getGeminiModelWithKey(keyIndex);
+      const unifiedModel = geminiToUnified(geminiModel);
+      const result = await fn(unifiedModel);
       // Success - update index to use next key for load balancing
-      currentKeyIndex = (keyIndex + 1) % API_KEYS.length;
+      currentGeminiKeyIndex = (keyIndex + 1) % GEMINI_API_KEYS.length;
       return result;
     } catch (error: any) {
       lastError = error;
-      console.log(`API call failed with key ${(currentKeyIndex + attempt) % API_KEYS.length}, status: ${error?.status}`);
+      console.log(`Gemini API call failed with key ${(currentGeminiKeyIndex + attempt) % GEMINI_API_KEYS.length}, status: ${error?.status}`);
       
       // Only retry on rate limit (429) errors
       if (error?.status === 429) {
-        console.log(`Rate limited, trying next key...`);
+        console.log(`Rate limited, trying next Gemini key...`);
         continue;
       }
-      // For other errors, don't retry
-      throw error;
+      // For other errors, don't retry with Gemini
+      break;
+    }
+  }
+  
+  // All Gemini keys exhausted, try Groq fallback
+  if (GROQ_API_KEYS.length > 0) {
+    console.log('All Gemini keys exhausted, falling back to Groq...');
+    for (let attempt = 0; attempt < GROQ_API_KEYS.length; attempt++) {
+      try {
+        const keyIndex = (currentGroqKeyIndex + attempt) % GROQ_API_KEYS.length;
+        const groqModel = getGroqModelWithKey(keyIndex);
+        const result = await fn(groqModel);
+        // Success - update index to use next key for load balancing
+        currentGroqKeyIndex = (keyIndex + 1) % GROQ_API_KEYS.length;
+        console.log('Groq fallback succeeded');
+        return result;
+      } catch (error: any) {
+        lastError = error;
+        console.log(`Groq API call failed with key ${(currentGroqKeyIndex + attempt) % GROQ_API_KEYS.length}, status: ${error?.status}`);
+        
+        // Only retry on rate limit (429) errors
+        if (error?.status === 429) {
+          console.log(`Groq rate limited, trying next key...`);
+          continue;
+        }
+        // For other errors, don't retry
+        break;
+      }
     }
   }
   
   // All keys exhausted
-  throw lastError;
+  throw lastError || new Error('All API keys exhausted');
 }
 
 export async function POST(request: NextRequest) {
@@ -108,7 +186,7 @@ export async function POST(request: NextRequest) {
 }
 
 // COMBINED: Single API call for EQ analysis + character response (cuts API usage in half)
-async function analyzeAndRespond(model: GenerativeModel, message: string, scenario: any, history: any[]) {
+async function analyzeAndRespond(model: UnifiedModel, message: string, scenario: any, history: any[]) {
   try {
     const conversationText = history
       .map((m: any) => `${m.isUser ? 'User' : scenario.characterName}: ${m.content}`)
@@ -187,7 +265,7 @@ Respond in this EXACT JSON format only (no markdown, no extra text):
   }
 }
 
-async function analyzeEQ(model: GenerativeModel, message: string, scenario: any) {
+async function analyzeEQ(model: UnifiedModel, message: string, scenario: any) {
   try {
     const prompt = `You are an expert emotional intelligence (EQ) analyst. Analyze the following message in the context of a difficult conversation scenario.
 
@@ -241,7 +319,7 @@ Respond in this EXACT JSON format only (no markdown, no extra text):
   }
 }
 
-async function generateCharacterResponse(model: GenerativeModel, message: string, scenario: any, history: any[]) {
+async function generateCharacterResponse(model: UnifiedModel, message: string, scenario: any, history: any[]) {
   try {
     const conversationText = history
       .map((m: any) => `${m.isUser ? 'User' : scenario.characterName}: ${m.content}`)
@@ -286,7 +364,7 @@ ${scenario.characterName}:`;
   }
 }
 
-async function getCoachHint(model: GenerativeModel, scenario: any, history: any[], scores: any[]) {
+async function getCoachHint(model: UnifiedModel, scenario: any, history: any[], scores: any[]) {
   try {
     const weakestDimension = scores.reduce((min, s) => (s.score < min.score ? s : min));
     const recentConversation = history
@@ -326,7 +404,7 @@ Tip:`;
   }
 }
 
-async function getImprovementSuggestions(model: GenerativeModel, scenario: any, scores: any[], history: any[]) {
+async function getImprovementSuggestions(model: UnifiedModel, scenario: any, scores: any[], history: any[]) {
   try {
     const weakestDimension = scores.reduce((min, s) => (s.score < min.score ? s : min));
     const conversationSummary = history
