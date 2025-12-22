@@ -377,7 +377,7 @@ export default function SummaryPage() {
 
   const handleHome = () => {
     resetSession();
-    router.push('/scenarios');
+    router.push('/');
   };
 
   const shareData = {

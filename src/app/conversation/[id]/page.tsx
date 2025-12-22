@@ -222,7 +222,7 @@ export default function ConversationPage() {
           <div className="grid grid-cols-[auto_1fr_auto] gap-2 items-center h-full">
             {/* Column 1: Back button */}
             <button
-              onClick={() => router.push('/scenarios')}
+              onClick={() => router.push('/')}
               className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors group flex-shrink-0"
             >
               <ArrowLeft className="w-4 h-4 text-slate-400 group-hover:text-slate-600" />
