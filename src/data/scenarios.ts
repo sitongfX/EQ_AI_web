@@ -145,7 +145,7 @@ export const scenarios: Scenario[] = [
     title: 'Political Family Tension',
     description: 'A family member\'s political views are causing conflict. Find a way to coexist respectfully.',
     category: 'advanced',
-    difficulty: 'intermediate',
+    difficulty: 'advanced',
     context: "Your Uncle Tom has been posting inflammatory political content on social media and making uncomfortable comments at family gatherings. It's creating tension across the family. At a recent dinner, he made a comment that deeply offended you. You've decided to address this privately before the next family event.",
     characterName: 'Uncle Tom',
     characterPersona: 'You are Uncle Tom, who feels strongly about your political beliefs and doesn\'t understand why everyone is so sensitive. You see yourself as a truth-teller in a world of political correctness. You\'ll likely get defensive if confronted, saying things like "I have a right to my opinion" or "You\'re too sensitive." You love your family but value being right more than keeping the peace. You might soften if approached with genuine curiosity rather than confrontation.',

@@ -10,9 +10,15 @@ const GEMINI_API_KEYS = [
 ].filter(Boolean) as string[];
 
 const GROQ_API_KEYS = [
-  process.env.GROQ_API_KEY_1,
-  process.env.GROQ_API_KEY_2,
+  process.env.GROQ_KEY_1,
+  process.env.GROQ_KEY_2,
 ].filter(Boolean) as string[];
+
+// Log Groq keys availability (without exposing keys)
+if (typeof process !== 'undefined') {
+  console.log(`Groq API keys configured: ${GROQ_API_KEYS.length} keys available`);
+  console.log(`Gemini API keys configured: ${GEMINI_API_KEYS.length} keys available`);
+}
 
 // Track which key to use next
 let currentGeminiKeyIndex = 0;
@@ -47,7 +53,7 @@ function getGroqModelWithKey(keyIndex: number): UnifiedModel {
     generateContent: async (prompt: string) => {
       const completion = await groq.chat.completions.create({
         messages: [{ role: 'user', content: prompt }],
-        model: 'llama-3.1-70b-versatile',
+        model: 'llama-3.3-70b-versatile',
         temperature: 0.7,
       });
       return {
@@ -70,6 +76,16 @@ function geminiToUnified(model: GenerativeModel): UnifiedModel {
   };
 }
 
+// Helper function to check if error is a 429 rate limit error
+function isRateLimitError(error: any): boolean {
+  return error?.status === 429 ||
+         error?.statusText === 'Too Many Requests' ||
+         error?.errorDetails?.some((d: any) => d['@type']?.includes('QuotaFailure')) ||
+         error?.message?.includes('429') ||
+         error?.message?.includes('quota') ||
+         error?.message?.includes('rate limit');
+}
+
 // Call API with automatic retry on rate limit (429), fallback to Groq
 async function callWithRetry<T>(
   fn: (model: UnifiedModel) => Promise<T>,
@@ -78,51 +94,78 @@ async function callWithRetry<T>(
   let lastError: any;
   
   // Try Gemini keys first
+  let geminiAttempts = 0;
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
       const keyIndex = (currentGeminiKeyIndex + attempt) % GEMINI_API_KEYS.length;
+      geminiAttempts++;
+      console.log(`Attempting Gemini API call ${geminiAttempts}/${maxRetries} with key index ${keyIndex}`);
       const geminiModel = getGeminiModelWithKey(keyIndex);
       const unifiedModel = geminiToUnified(geminiModel);
       const result = await fn(unifiedModel);
       // Success - update index to use next key for load balancing
       currentGeminiKeyIndex = (keyIndex + 1) % GEMINI_API_KEYS.length;
+      console.log(`Gemini API call succeeded with key index ${keyIndex}`);
       return result;
     } catch (error: any) {
       lastError = error;
-      console.log(`Gemini API call failed with key ${(currentGeminiKeyIndex + attempt) % GEMINI_API_KEYS.length}, status: ${error?.status}`);
+      // Check multiple possible error status locations
+      const errorStatus = error?.status || error?.response?.status || error?.statusCode || 
+                         (error?.errorDetails?.[0]?.['@type']?.includes('QuotaFailure') ? 429 : null) ||
+                         'unknown';
       
-      // Only retry on rate limit (429) errors
-      if (error?.status === 429) {
-        console.log(`Rate limited, trying next Gemini key...`);
-        continue;
+      console.log(`Gemini API call failed with key ${(currentGeminiKeyIndex + attempt) % GEMINI_API_KEYS.length}`);
+      console.log(`Error details: status=${errorStatus}, message=${error?.message || 'N/A'}`);
+      
+      // Check if it's a 429 rate limit error
+      const isRateLimit = isRateLimitError(error);
+      
+      if (isRateLimit) {
+        console.log(`Rate limited (429), trying next Gemini key... (attempt ${attempt + 1}/${maxRetries})`);
+        // Continue to next Gemini key
+        if (attempt < maxRetries - 1) {
+          continue;
+        }
+        // If this was the last Gemini key, fall through to Groq
+        console.log(`All ${maxRetries} Gemini keys returned 429, will try Groq fallback`);
+      } else {
+        // For other errors, don't retry with Gemini, try Groq immediately
+        console.log(`Non-429 error (${errorStatus}), will try Groq fallback`);
+        break;
       }
-      // For other errors, don't retry with Gemini
-      break;
     }
   }
   
   // All Gemini keys exhausted, try Groq fallback
-  if (GROQ_API_KEYS.length > 0) {
-    console.log('All Gemini keys exhausted, falling back to Groq...');
+  console.log(`=== Checking Groq fallback: ${GROQ_API_KEYS.length} Groq keys available ===`);
+  if (GROQ_API_KEYS.length === 0) {
+    console.error('⚠️  No Groq API keys configured! Groq fallback will not work.');
+    console.error('Please set GROQ_KEY_1 and GROQ_KEY_2 environment variables.');
+  } else {
+    console.log('✅ Groq keys found, attempting fallback...');
     for (let attempt = 0; attempt < GROQ_API_KEYS.length; attempt++) {
       try {
         const keyIndex = (currentGroqKeyIndex + attempt) % GROQ_API_KEYS.length;
+        console.log(`🔄 Attempting Groq API call ${attempt + 1}/${GROQ_API_KEYS.length} with key index ${keyIndex}`);
         const groqModel = getGroqModelWithKey(keyIndex);
         const result = await fn(groqModel);
         // Success - update index to use next key for load balancing
         currentGroqKeyIndex = (keyIndex + 1) % GROQ_API_KEYS.length;
-        console.log('Groq fallback succeeded');
+        console.log('✅ Groq fallback succeeded!');
         return result;
       } catch (error: any) {
         lastError = error;
-        console.log(`Groq API call failed with key ${(currentGroqKeyIndex + attempt) % GROQ_API_KEYS.length}, status: ${error?.status}`);
+        const errorStatus = error?.status || error?.response?.status || 'unknown';
+        console.log(`❌ Groq API call failed with key ${(currentGroqKeyIndex + attempt) % GROQ_API_KEYS.length}, status: ${errorStatus}`);
+        console.log(`Error message: ${error?.message || 'N/A'}`);
         
         // Only retry on rate limit (429) errors
-        if (error?.status === 429) {
-          console.log(`Groq rate limited, trying next key...`);
+        if (errorStatus === 429) {
+          console.log(`⚠️  Groq rate limited, trying next key...`);
           continue;
         }
         // For other errors, don't retry
+        console.log(`⚠️  Non-429 error from Groq, stopping retries`);
         break;
       }
     }
@@ -256,8 +299,12 @@ Respond in this EXACT JSON format only (no markdown, no extra text):
       };
     }
     throw new Error('Invalid response format');
-  } catch (error) {
+  } catch (error: any) {
     console.error('Combined analysis error:', error);
+    // Re-throw 429 errors so callWithRetry can handle them and trigger Groq fallback
+    if (isRateLimitError(error)) {
+      throw error;
+    }
     return {
       eqAnalysis: fallbackEQAnalysis(message),
       characterResponse: fallbackCharacterResponse(message, history),
@@ -313,8 +360,12 @@ Respond in this EXACT JSON format only (no markdown, no extra text):
       };
     }
     throw new Error('Invalid response format');
-  } catch (error) {
+  } catch (error: any) {
     console.error('EQ Analysis error:', error);
+    // Re-throw 429 errors so callWithRetry can handle them and trigger Groq fallback
+    if (isRateLimitError(error)) {
+      throw error;
+    }
     return fallbackEQAnalysis(message);
   }
 }
@@ -358,8 +409,12 @@ ${scenario.characterName}:`;
     }
     
     return response || fallbackCharacterResponse(message, history);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Character response error:', error);
+    // Re-throw 429 errors so callWithRetry can handle them and trigger Groq fallback
+    if (isRateLimitError(error)) {
+      throw error;
+    }
     return fallbackCharacterResponse(message, history);
   }
 }
@@ -398,8 +453,12 @@ Tip:`;
     }
     
     return hint || fallbackHint(scores);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Coach hint error:', error);
+    // Re-throw 429 errors so callWithRetry can handle them and trigger Groq fallback
+    if (isRateLimitError(error)) {
+      throw error;
+    }
     return fallbackHint(scores);
   }
 }
@@ -459,8 +518,12 @@ Respond in this EXACT JSON format only (no markdown, no extra text):
       }
     }
     throw new Error('Invalid response format');
-  } catch (error) {
+  } catch (error: any) {
     console.error('Improvement suggestions error:', error);
+    // Re-throw 429 errors so callWithRetry can handle them and trigger Groq fallback
+    if (isRateLimitError(error)) {
+      throw error;
+    }
     return getFallbackImprovements(scores);
   }
 }

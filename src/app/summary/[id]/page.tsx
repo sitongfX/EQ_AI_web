@@ -310,8 +310,14 @@ export default function SummaryPage() {
   const id = params.id as string;
   const [showShare, setShowShare] = useState(false);
   const [historySaved, setHistorySaved] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
   const { session, currentEQScores, completedTasks, messages, resetSession } = useConversationStore();
+
+  // Track client-side mount to prevent hydration mismatch
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
   const { addSession } = useHistoryStore();
 
   const scenario = scenarios.find(s => s.id === id);
@@ -327,7 +333,9 @@ export default function SummaryPage() {
     if (session && scenario && !historySaved) {
       const tasks = parseObjectives(scenario.userObjective);
       const completedCount = tasks.filter(t => completedTasks.has(t)).length;
-      const avgScore = currentEQScores.reduce((sum, s) => sum + s.score, 0) / currentEQScores.length;
+      const avgScore = currentEQScores.length > 0 
+        ? currentEQScores.reduce((sum, s) => sum + s.score, 0) / currentEQScores.length
+        : 50;
       
       addSession({
         scenarioId: scenario.id,
@@ -362,7 +370,10 @@ export default function SummaryPage() {
 
   const tasks = parseObjectives(scenario.userObjective);
   const completedCount = tasks.filter(t => completedTasks.has(t)).length;
-  const avgScore = currentEQScores.reduce((sum, s) => sum + s.score, 0) / currentEQScores.length;
+  // Ensure safe calculation to avoid hydration mismatch
+  const avgScore = currentEQScores.length > 0 
+    ? currentEQScores.reduce((sum, s) => sum + s.score, 0) / currentEQScores.length
+    : 50; // Default fallback to match initial EQ scores
   const userMessages = messages.filter(m => m.isUser);
   
   // Find highest impact moment (user message with highest overall score)
@@ -375,9 +386,16 @@ export default function SummaryPage() {
     router.push(`/conversation/${id}`);
   };
 
-  const handleHome = () => {
+  const handleHome = (e?: React.MouseEvent) => {
+    e?.preventDefault();
+    e?.stopPropagation();
     resetSession();
-    router.push('/');
+    // Use direct navigation for reliability
+    if (typeof window !== 'undefined') {
+      window.location.href = '/scenarios';
+    } else {
+      router.replace('/scenarios');
+    }
   };
 
   const shareData = {
@@ -428,15 +446,21 @@ export default function SummaryPage() {
 
             <div className="flex justify-center gap-6 sm:gap-8">
               <div className="text-center">
-                <div className="text-2xl sm:text-3xl font-bold gradient-text">{Math.round(avgScore)}</div>
+                <div className="text-2xl sm:text-3xl font-bold gradient-text">
+                  {isMounted && currentEQScores.length > 0 ? Math.round(avgScore) : '50'}
+                </div>
                 <div className="text-xs sm:text-sm text-slate-500">Avg EQ Score</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl sm:text-3xl font-bold text-emerald-500">{completedCount}/{tasks.length}</div>
+                <div className="text-2xl sm:text-3xl font-bold text-emerald-500">
+                  {isMounted ? `${completedCount}/${tasks.length}` : '-'}
+                </div>
                 <div className="text-xs sm:text-sm text-slate-500">Goals Met</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl sm:text-3xl font-bold text-blue-500">{userMessages.length}</div>
+                <div className="text-2xl sm:text-3xl font-bold text-blue-500">
+                  {isMounted ? userMessages.length : '-'}
+                </div>
                 <div className="text-xs sm:text-sm text-slate-500">Messages</div>
               </div>
             </div>
