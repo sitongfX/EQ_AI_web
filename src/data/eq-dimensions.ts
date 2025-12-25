@@ -69,3 +69,4 @@ export const difficultyInfo: Record<string, { name: string; color: string }> = {
 };
 
 
+
