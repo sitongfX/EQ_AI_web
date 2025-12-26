@@ -34,7 +34,7 @@ export default function LearnMorePage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#FAFBFC] via-white to-slate-50">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-xl border-b border-slate-200/50 shadow-sm">
+      <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-xl border-b border-slate-200/50 shadow-sm" role="banner">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between">
             <motion.div
@@ -88,7 +88,7 @@ export default function LearnMorePage() {
       </header>
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden py-16 sm:py-24 pb-32">
+      <section className="relative overflow-hidden py-16 sm:py-24 pb-32" aria-labelledby="hero-heading">
         <div className="hero-orb hero-orb-1" />
         <div className="hero-orb hero-orb-2" />
         <div className="hero-orb hero-orb-3" />
@@ -109,11 +109,11 @@ export default function LearnMorePage() {
               <span className="text-sm font-medium text-slate-700">Practice real conversations with AI</span>
             </motion.div>
 
-            <motion.h1 variants={fadeInUp} className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight mb-6">
+            <h1 id="hero-heading" className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight mb-6">
               <span className="text-slate-900">Master Your</span>
               <br />
               <span className="gradient-text">Emotional Intelligence</span>
-            </motion.h1>
+            </h1>
 
             <motion.p variants={fadeInUp} className="text-lg sm:text-xl text-slate-600 mb-8 max-w-2xl mx-auto text-balance">
               Practice difficult conversations in a safe environment. Get real-time feedback on your emotional intelligence and communication skills.
@@ -157,19 +157,16 @@ export default function LearnMorePage() {
       </section>
 
       {/* Main Content */}
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 pb-20 space-y-24">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 pb-20 space-y-24" role="main">
         {/* Why EQ Matters Section */}
-        <motion.section
-          initial={{ opacity: 0, y: 40 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
+        <article
           className="py-8"
           id="why-eq"
+          aria-labelledby="why-eq-heading"
         >
           <div className="text-center mb-12">
-            <span className="badge badge-primary mb-4">The Science</span>
-            <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">Why EQ Matters</h2>
+            <span className="badge badge-primary mb-4" aria-label="Section category">The Science</span>
+            <h2 id="why-eq-heading" className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">Why EQ Matters</h2>
             <p className="text-lg text-slate-600 max-w-2xl mx-auto">
               Emotional intelligence is the strongest predictor of performance and the foundation of critical skills.
             </p>
@@ -201,20 +198,17 @@ export default function LearnMorePage() {
               </motion.div>
             ))}
           </div>
-        </motion.section>
+        </article>
 
         {/* How It Works */}
-        <motion.section
-          initial={{ opacity: 0, y: 40 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
+        <section
           className="py-8"
           id="how-it-works"
+          aria-labelledby="how-it-works-heading"
         >
           <div className="text-center mb-12">
-            <span className="badge badge-success mb-4">How It Works</span>
-            <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">Simple. Effective. Transformative.</h2>
+            <span className="badge badge-success mb-4" aria-label="Section category">How It Works</span>
+            <h2 id="how-it-works-heading" className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">Simple. Effective. Transformative.</h2>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
@@ -247,35 +241,27 @@ export default function LearnMorePage() {
               </motion.div>
             ))}
           </div>
-        </motion.section>
+        </section>
 
         {/* Quote */}
-        <motion.section
-          initial={{ opacity: 0, y: 40 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-        >
+        <section aria-label="Expert quote about emotional intelligence">
           <div className="gradient-border">
             <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-[22px] p-8 sm:p-12 text-center">
-              <Quote className="w-12 h-12 text-primary/50 mx-auto mb-6" />
+              <Quote className="w-12 h-12 text-primary/50 mx-auto mb-6" aria-hidden="true" />
               <blockquote className="text-xl sm:text-2xl text-white font-medium mb-6 max-w-3xl mx-auto leading-relaxed">
                 &ldquo;EQ is responsible for 58% of your job performance. It&apos;s the single biggest predictor of performance in the workplace and the strongest driver of leadership and personal excellence.&rdquo;
               </blockquote>
               <cite className="text-slate-400 not-italic">— Travis Bradberry, Author of Emotional Intelligence 2.0</cite>
             </div>
           </div>
-        </motion.section>
+        </section>
 
         {/* CTA */}
-        <motion.section
-          initial={{ opacity: 0, y: 40 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
+        <section
           className="text-center py-12"
+          aria-labelledby="cta-heading"
         >
-          <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">Ready to Level Up Your EQ?</h2>
+          <h2 id="cta-heading" className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">Ready to Level Up Your EQ?</h2>
           <p className="text-lg text-slate-600 mb-8 max-w-xl mx-auto">
             Start practicing difficult conversations today and become a better communicator.
           </p>
@@ -286,11 +272,11 @@ export default function LearnMorePage() {
             Get Started Free
             <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
           </button>
-        </motion.section>
+        </section>
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-200 bg-white">
+      <footer className="border-t border-slate-200 bg-white" role="contentinfo">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12">
           <div className="flex flex-col md:flex-row items-center justify-between gap-8">
             <div className="flex items-center gap-3">

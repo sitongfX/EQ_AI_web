@@ -299,7 +299,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-[#FAFBFC]">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-xl border-b border-slate-200/50 shadow-sm">
+      <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-xl border-b border-slate-200/50 shadow-sm" role="banner">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between">
             <motion.div
@@ -319,7 +319,7 @@ export default function HomePage() {
                 <h1 className="font-bold text-xl tracking-tight">
                   <span className="gradient-text">NiceAI</span>
                 </h1>
-                <p className="text-[11px] text-slate-500 font-medium tracking-wide">YOUR PERSONAL EQ & SOCIAL SKILLS COACH</p>
+                <p className="text-[11px] text-slate-500 font-medium tracking-wide" aria-label="Tagline">YOUR PERSONAL EQ & SOCIAL SKILLS COACH</p>
               </div>
             </motion.div>
 
@@ -355,9 +355,9 @@ export default function HomePage() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-8" role="main">
         {/* Welcome Card */}
-        <motion.section
+        <section
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
@@ -417,17 +417,15 @@ export default function HomePage() {
         </motion.section>
 
         {/* Scenarios Section */}
-        <motion.section
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
+        <section
+          aria-labelledby="scenarios-heading"
         >
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div>
-              <h2 className="text-2xl font-bold text-slate-900">Practice Scenarios</h2>
+              <h2 id="scenarios-heading" className="text-2xl font-bold text-slate-900">Practice Scenarios</h2>
               <p className="text-slate-500 mt-1">Choose a situation to practice your emotional intelligence</p>
             </div>
-            <span className="text-sm text-slate-400">{filteredScenarios.length} scenarios</span>
+            <span className="text-sm text-slate-400" aria-label="Number of scenarios">{filteredScenarios.length} scenarios</span>
           </div>
 
           {/* Category Filters */}
