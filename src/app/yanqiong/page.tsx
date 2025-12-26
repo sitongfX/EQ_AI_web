@@ -553,13 +553,22 @@ export default function BirthdayPage() {
               ))}
             </div>
 
-            {/* 3D蜡烛 */}
-            {Array.from({ length: 3 }).map((_, i) => (
+            {/* 3D蜡烛 - 居中在顶层蛋糕上 */}
+            {Array.from({ length: 3 }).map((_, i) => {
+              // 容器宽度220px，中心110px
+              // 顶层蛋糕120px宽，使用left-1/2 transform -translate-x-1/2，中心在110px
+              // 3根蜡烛，每根10px宽，间距20px
+              // 第一根蜡烛中心应该在110px（容器中心），所以left = 110 - 5 = 105px
+              // 第二根蜡烛中心在110 + 30 = 140px，left = 140 - 5 = 135px
+              // 第三根蜡烛中心在110 + 60 = 170px，left = 170 - 5 = 165px
+              const candleCenter = 110 + (i - 1) * 30; // 每根蜡烛中心间距30px
+              const candleLeft = candleCenter - 5; // 蜡烛宽度10px，所以left = 中心 - 5
+              return (
               <motion.div
                 key={i}
                 className="absolute"
                 style={{
-                  left: `${105 + (i - 1) * 20}px`,
+                  left: `${candleLeft}px`,
                   bottom: '180px',
                   transform: `translateZ(${60 + i * 5}px)`,
                 }}
@@ -625,7 +634,8 @@ export default function BirthdayPage() {
                   }}
                 />
               </motion.div>
-            ))}
+              );
+            })}
           </div>
         </motion.div>
 
