@@ -432,7 +432,7 @@ export default function BirthdayPage() {
 
         {/* 改进的生日蛋糕 */}
         <motion.div
-          className="relative mb-8 flex justify-center"
+          className="relative mb-8 flex justify-center items-center w-full"
           initial={{ opacity: 0, y: 50, rotateX: -90 }}
           animate={{ 
             opacity: 1, 
@@ -446,17 +446,18 @@ export default function BirthdayPage() {
             transformStyle: 'preserve-3d',
           }}
         >
-          <div className="relative mx-auto" style={{ width: '220px', height: '200px' }}>
+          <div className="relative" style={{ width: '220px', height: '200px' }}>
             {/* 底层蛋糕 - 3D效果 */}
             <div
-              className="absolute bottom-0 left-1/2 transform -translate-x-1/2"
+              className="absolute bottom-0"
               style={{
+                left: '50%',
                 width: '200px',
                 height: '70px',
                 background: 'linear-gradient(135deg, #ff6b9d 0%, #ff8fab 100%)',
                 borderRadius: '12px',
                 boxShadow: '0 8px 25px rgba(255, 107, 157, 0.5), 0 0 30px rgba(255, 107, 157, 0.3)',
-                transform: 'translateZ(0px)',
+                transform: 'translateX(-50%) translateZ(0px)',
               }}
             >
               {/* 3D奶油装饰 */}
@@ -485,14 +486,15 @@ export default function BirthdayPage() {
 
             {/* 中层蛋糕 */}
             <div
-              className="absolute bottom-16 left-1/2 transform -translate-x-1/2"
+              className="absolute bottom-16"
               style={{
+                left: '50%',
                 width: '160px',
                 height: '60px',
                 background: 'linear-gradient(135deg, #ffb3ba 0%, #ffc5cc 100%)',
                 borderRadius: '10px',
                 boxShadow: '0 8px 25px rgba(255, 179, 186, 0.5), 0 0 30px rgba(255, 179, 186, 0.3)',
-                transform: 'translateZ(20px)',
+                transform: 'translateX(-50%) translateZ(20px)',
               }}
             >
               {Array.from({ length: 8 }).map((_, i) => (
@@ -520,14 +522,15 @@ export default function BirthdayPage() {
 
             {/* 顶层蛋糕 */}
             <div
-              className="absolute bottom-28 left-1/2 transform -translate-x-1/2"
+              className="absolute bottom-28"
               style={{
+                left: '50%',
                 width: '120px',
                 height: '50px',
                 background: 'linear-gradient(135deg, #ffd1dc 0%, #ffe5ea 100%)',
                 borderRadius: '8px',
                 boxShadow: '0 8px 25px rgba(255, 209, 220, 0.5), 0 0 30px rgba(255, 209, 220, 0.3)',
-                transform: 'translateZ(40px)',
+                transform: 'translateX(-50%) translateZ(40px)',
               }}
             >
               {Array.from({ length: 6 }).map((_, i) => (
