@@ -305,8 +305,7 @@ export default function ScenariosPage() {
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              className="flex items-center gap-3 cursor-pointer"
-              onClick={() => router.push('/')}
+              className="flex items-center gap-3"
             >
               <div className="relative">
                 <div className="w-12 h-12 rounded-2xl animated-gradient flex items-center justify-center shadow-lg shadow-primary/30">
@@ -320,7 +319,7 @@ export default function ScenariosPage() {
                 <h1 className="font-bold text-xl tracking-tight">
                   <span className="gradient-text">NiceAI</span>
                 </h1>
-                <p className="text-[11px] text-slate-500 font-medium tracking-wide">AI-POWERED CONVERSATIONS</p>
+                <p className="text-[11px] text-slate-500 font-medium tracking-wide">YOUR PERSONAL EQ & SOCIAL SKILLS COACH</p>
               </div>
             </motion.div>
 

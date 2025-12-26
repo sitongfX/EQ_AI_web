@@ -392,9 +392,9 @@ export default function SummaryPage() {
     resetSession();
     // Use direct navigation for reliability
     if (typeof window !== 'undefined') {
-      window.location.href = '/scenarios';
+      window.location.href = '/';
     } else {
-      router.replace('/scenarios');
+      router.replace('/');
     }
   };
 

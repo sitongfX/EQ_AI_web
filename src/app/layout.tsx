@@ -40,36 +40,52 @@ export default function RootLayout({
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              '@context': 'https://schema.org',
-              '@type': 'FAQPage',
-              mainEntity: [
-                {
-                  '@type': 'Question',
-                  name: 'What is emotional intelligence (EQ)?',
-                  acceptedAnswer: {
-                    '@type': 'Answer',
-                    text: 'Emotional intelligence is the ability to recognize, understand, and manage your own emotions, as well as recognize, understand, and influence the emotions of others. It consists of four key dimensions: self-awareness, self-management, social awareness, and relationship management.',
-                  },
+            __html: JSON.stringify([
+              {
+                '@context': 'https://schema.org',
+                '@type': 'Organization',
+                name: 'NiceAI',
+                url: 'https://niceai.chat',
+                logo: 'https://niceai.chat/favicon.svg',
+                description: 'AI-powered emotional intelligence training platform helping people improve their EQ through realistic conversation practice.',
+                sameAs: [],
+                contactPoint: {
+                  '@type': 'ContactPoint',
+                  contactType: 'Customer Support',
+                  url: 'https://niceai.chat/support.html',
                 },
-                {
-                  '@type': 'Question',
-                  name: 'How does NiceAI help improve emotional intelligence?',
-                  acceptedAnswer: {
-                    '@type': 'Answer',
-                    text: 'NiceAI provides realistic conversation scenarios where you can practice difficult conversations with AI characters. You receive real-time feedback on your emotional intelligence across four dimensions, helping you identify areas for improvement and track your progress over time.',
+              },
+              {
+                '@context': 'https://schema.org',
+                '@type': 'FAQPage',
+                mainEntity: [
+                  {
+                    '@type': 'Question',
+                    name: 'What is emotional intelligence (EQ)?',
+                    acceptedAnswer: {
+                      '@type': 'Answer',
+                      text: 'Emotional intelligence is the ability to recognize, understand, and manage your own emotions, as well as recognize, understand, and influence the emotions of others. It consists of four key dimensions: self-awareness, self-management, social awareness, and relationship management.',
+                    },
                   },
-                },
-                {
-                  '@type': 'Question',
-                  name: 'Is NiceAI free to use?',
-                  acceptedAnswer: {
-                    '@type': 'Answer',
-                    text: 'Yes, NiceAI is free to use. You can practice unlimited conversation scenarios and receive AI-powered feedback on your emotional intelligence skills at no cost. Visit https://niceai.chat/ to get started.',
+                  {
+                    '@type': 'Question',
+                    name: 'How does NiceAI help improve emotional intelligence?',
+                    acceptedAnswer: {
+                      '@type': 'Answer',
+                      text: 'NiceAI provides realistic conversation scenarios where you can practice difficult conversations with AI characters. You receive real-time feedback on your emotional intelligence across four dimensions, helping you identify areas for improvement and track your progress over time.',
+                    },
                   },
-                },
-              ],
-            }),
+                  {
+                    '@type': 'Question',
+                    name: 'Is NiceAI free to use?',
+                    acceptedAnswer: {
+                      '@type': 'Answer',
+                      text: 'Yes, NiceAI is free to use. You can practice unlimited conversation scenarios and receive AI-powered feedback on your emotional intelligence skills at no cost. Visit https://niceai.chat/ to get started.',
+                    },
+                  },
+                ],
+              },
+            ]),
           }}
         />
       </head>
