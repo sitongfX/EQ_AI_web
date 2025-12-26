@@ -41,12 +41,6 @@ export const metadata: Metadata = {
       'x-default': 'https://niceai.chat',
     },
   },
-  verification: {
-    google: process.env.GOOGLE_SITE_VERIFICATION || '',
-    // Add other verification codes as needed:
-    // yandex: 'your-yandex-verification-code',
-    // bing: 'your-bing-verification-code',
-  },
   robots: {
     index: true,
     follow: true,
