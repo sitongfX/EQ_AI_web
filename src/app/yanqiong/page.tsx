@@ -42,7 +42,7 @@ export default function BirthdayPage() {
     }
 
     function animate() {
-      if (!ctx) return;
+      if (!ctx || !canvas) return;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       // 绘制星星
@@ -59,7 +59,7 @@ export default function BirthdayPage() {
       snowflakes.forEach((flake) => {
         flake.y += flake.speed;
         flake.rotation += 0.02;
-        if (flake.y > canvas.height) {
+        if (canvas && flake.y > canvas.height) {
           flake.y = -10;
           flake.x = Math.random() * canvas.width;
         }
@@ -84,6 +84,7 @@ export default function BirthdayPage() {
     animate();
 
     const handleResize = () => {
+      if (!canvas) return;
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
     };
