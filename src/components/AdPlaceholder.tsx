@@ -16,6 +16,3 @@ export function SidebarAd({ className = '' }: { className?: string }) {
 }
 
 
-
-
-
