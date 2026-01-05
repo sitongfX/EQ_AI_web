@@ -288,8 +288,9 @@ export default function HomePage() {
   const [showHistory, setShowHistory] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
 
-  const { totalSessions, currentStreak, getAverageScore } = useHistoryStore();
-  const avgScore = getAverageScore();
+  const historyStore = useHistoryStore();
+  const { totalSessions, currentStreak } = historyStore;
+  const avgScore = historyStore.getAverageScore();
 
   const filteredScenarios = useMemo(() => {
     if (!selectedCategory) {
