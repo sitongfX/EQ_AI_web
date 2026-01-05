@@ -287,14 +287,14 @@ export default function HomePage() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  
+
   const { totalSessions, currentStreak, getAverageScore } = useHistoryStore();
   const avgScore = getAverageScore();
 
   const filteredScenarios = useMemo(() => {
     if (!selectedCategory) return scenarios;
     return scenarios.filter(s => s.category === selectedCategory);
-  }, [selectedCategory]);
+  }, [selectedCategory, scenarios]);
 
   return (
     <div className="min-h-screen bg-[#FAFBFC]">
