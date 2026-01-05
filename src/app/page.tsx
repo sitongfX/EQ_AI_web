@@ -359,7 +359,7 @@ export default function HomePage() {
       {/* Main Content */}
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-8" role="main">
         {/* Welcome Card */}
-        <section
+        <motion.section
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
@@ -477,7 +477,7 @@ export default function HomePage() {
               ))}
             </AnimatePresence>
           </div>
-        </section>
+        </motion.section>
       </main>
 
       {/* Modals */}
