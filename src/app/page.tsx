@@ -293,10 +293,9 @@ export default function HomePage() {
   const avgScore = historyStore.getAverageScore();
 
   const filteredScenarios = useMemo(() => {
-    if (!selectedCategory) {
-      return scenarios;
-    }
-    return scenarios.filter((s) => s.category === selectedCategory);
+    return selectedCategory 
+      ? scenarios.filter((s) => s.category === selectedCategory)
+      : scenarios;
   }, [selectedCategory]);
 
   return (
