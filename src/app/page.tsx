@@ -289,14 +289,14 @@ export default function HomePage() {
   const [showSettings, setShowSettings] = useState(false);
 
   const historyStore = useHistoryStore();
-  const { totalSessions, currentStreak } = historyStore;
+  const totalSessions = historyStore.totalSessions;
+  const currentStreak = historyStore.currentStreak;
   const avgScore = historyStore.getAverageScore();
-
-  const filteredScenarios = useMemo(() => {
-    return selectedCategory 
-      ? scenarios.filter((s) => s.category === selectedCategory)
-      : scenarios;
-  }, [selectedCategory]);
+  
+  let filteredScenarios = scenarios;
+  if (selectedCategory) {
+    filteredScenarios = scenarios.filter((s) => s.category === selectedCategory);
+  }
 
   return (
     <div className="min-h-screen bg-[#FAFBFC]">
@@ -419,7 +419,7 @@ export default function HomePage() {
         </motion.section>
 
         {/* Scenarios Section */}
-        <section
+        <motion.section
           aria-labelledby="scenarios-heading"
         >
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
@@ -464,7 +464,7 @@ export default function HomePage() {
         </motion.section>
 
         {/* Scenario Grid */}
-        <section>
+        <motion.section>
           <div className="grid gap-5 sm:gap-6 md:grid-cols-2">
             <AnimatePresence mode="popLayout">
               {filteredScenarios.map((scenario, index) => (
