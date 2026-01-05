@@ -292,9 +292,11 @@ export default function HomePage() {
   const avgScore = getAverageScore();
 
   const filteredScenarios = useMemo(() => {
-    if (!selectedCategory) return scenarios;
-    return scenarios.filter(s => s.category === selectedCategory);
-  }, [selectedCategory, scenarios]);
+    if (!selectedCategory) {
+      return scenarios;
+    }
+    return scenarios.filter((s) => s.category === selectedCategory);
+  }, [selectedCategory]);
 
   return (
     <div className="min-h-screen bg-[#FAFBFC]">
